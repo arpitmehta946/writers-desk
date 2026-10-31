@@ -163,6 +163,21 @@ nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--sur
 .md p{margin:0 0 8px}
 .md ul{margin:0 0 8px;padding-left:20px}
 .md blockquote{margin:0 0 8px;border-left:3px solid var(--line);padding-left:10px;color:var(--muted)}
+mark.ai{background:transparent;color:inherit;border-bottom:2px solid var(--warn);background-image:linear-gradient(transparent 60%,var(--accent-soft) 60%);cursor:pointer;padding:0 1px;border-radius:0}
+.aioff mark.ai{border-bottom:0;background-image:none;cursor:text}
+mark.ai.flash{outline:3px solid var(--warn);outline-offset:2px}
+.aihead{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.aiverdict{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:999px;border:1px solid currentColor}
+.aiverdict.good{color:var(--ok)} .aiverdict.mid{color:var(--warn)} .aiverdict.bad{color:var(--warn);background:var(--mark)}
+.aicat h3{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:14px 0 4px;font-weight:500}
+.airow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;width:100%;text-align:left;background:none;border:0;border-bottom:1px dashed var(--line);padding:9px 0;color:var(--ink);cursor:pointer;font:inherit}
+.airow:hover b{color:var(--accent)}
+.airow b{font-family:var(--display);font-weight:500;font-size:16px}
+.airow .cnt{font-family:var(--mono);font-size:12px;color:var(--warn);align-self:center}
+.airow .tip{grid-column:1/-1;color:var(--muted);font-size:14px}
+.airow:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.aipop{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));width:min(92vw,440px);background:var(--ink);color:var(--paper);border-radius:12px;padding:12px 14px;font-size:15px;z-index:25;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.aipop b{font-family:var(--display)}
 .pipeline{display:flex;flex-direction:column;gap:22px;margin-top:22px}
 .draftbar{display:flex;flex-direction:column;gap:8px}
 .draftedit{min-height:420px;font-family:var(--mono);font-size:14px;line-height:1.5}
@@ -319,6 +334,23 @@ header.bar{max-height:75vh;overflow-y:auto}
         <article class="article" id="draftOut"></article>
       </div>
 
+
+      <div class="rsec" id="aiBlock" hidden>
+        <div class="eyebrow">AI-pattern check</div>
+        <div class="aihead"><h2>Words that sound like AI</h2><span class="aiverdict" id="aiVerdict"></span></div>
+        <p class="help" id="aiSummary"></p>
+        <label class="check" style="border:0;padding:4px 0"><input type="checkbox" id="aiToggle" checked><div><strong>Highlight them in the article</strong><span>Tap a highlighted word to see what to use instead.</span></div></label>
+        <div id="aiList"></div>
+        <div id="aiFixWrap" hidden>
+          <div class="aibar"><button class="btn" type="button" id="aifixGo">Rewrite these with AI</button><button class="btn ghost" type="button" id="aifixStop" hidden>Stop</button><span class="status" id="aifixStatus"></span></div>
+          <p class="help" style="margin-top:6px">Only the sentences with these patterns change. Everything else stays as it is, and you can undo.</p>
+          <div class="manual" id="aifixManual" hidden>
+        <p class="help"><b>No API key?</b> Have Claude rewrite them in your Claude app.</p>
+        <div class="step"><span class="n">1</span><div><div class="row"><button class="btn" type="button" data-mcopy="aifix">Copy prompt</button><a class="btn ghost" href="https://claude.ai/new" target="_blank" rel="noopener">Open Claude</a></div><p class="help">Paste into a new chat and send.</p></div></div>
+        <div class="step"><span class="n">2</span><div><textarea id="aifixPaste" placeholder="Paste the revised article" style="min-height:80px"></textarea><div class="row" style="margin-top:8px"><button class="btn" type="button" data-mload="aifix">Use revised draft</button><span class="status" id="aifixPasteStatus"></span></div></div></div>
+      </div>
+        </div>
+      </div>
       <div class="rsec" id="checkBlock" hidden>
         <div class="eyebrow">Step 3 · Check</div>
         <h2>Check it with AI</h2>
@@ -703,10 +735,13 @@ function scan(){
   const hits=[];let html=esc(t);
   FILLER.forEach(([re,tip])=>{const m=t.match(re);if(m){m.forEach(x=>hits.push([x,tip]));html=html.replace(new RegExp(re.source,re.flags),x=>`<mark>${x}</mark>`)}});
   const avg=Math.round(words/sents);
-  $("#eStats").innerHTML=`<span><b>${words}</b> words</span><span><b>${sents}</b> sentences</span><span><b>${avg}</b> avg / sentence</span><span><b>${hits.length}</b> flags</span>`;
+  const aiF=aiScan(t);
+  $("#eStats").innerHTML=`<span><b>${words}</b> words</span><span><b>${sents}</b> sentences</span><span><b>${avg}</b> avg / sentence</span><span><b>${hits.length}</b> flags</span><span><b>${aiF.reduce((a,f)=>a+f.count,0)}</b> AI patterns</span>`;
   $("#eMarked").hidden=false;$("#eMarked").innerHTML=html;
+  highlightAI($("#eMarked"),new Set(aiF.map(f=>f.i)));
   const seen=new Set();
   let li=hits.filter(h=>{const k=h[0].toLowerCase();if(seen.has(k))return false;seen.add(k);return true}).map(h=>`<li><code>${esc(h[0])}</code> ${esc(h[1])}</li>`);
+  aiF.forEach(f=>li.push(`<li><code>${esc(f.label)}</code> <b>AI pattern${f.count>1?" ×"+f.count:""}.</b> ${esc(f.tip)}</li>`));
   if(avg>25)li.unshift(`<li><code>long sentences</code> Averaging ${avg} words. Split where a sentence carries two ideas.</li>`);
   if(!li.length)li=[`<li>No filler patterns found. Now check every sentence does a job.</li>`];
   $("#eFlags").innerHTML=li.join("");
@@ -800,6 +835,149 @@ $("#delNo").onclick=()=>{$("#delConfirm").hidden=true};
 $("#delYes").onclick=()=>{delete S.projects[S.current];S.current=Object.keys(S.projects)[0]||null;if(!S.current)newProject("Untitled article",true);save();renderProjects();fillAll();renderReader(1);$("#delConfirm").hidden=true;toast("Deleted")};
 window.addEventListener("hashchange",()=>show(location.hash.slice(1)));
 
+
+// ================= AI-pattern detector (runs locally, no AI call) =================
+const AI_CATS=["Overused AI words","Filler phrases","Formulaic transitions","Cliché openers and closers","Hype and marketing talk","Punctuation tells"];
+const AI_PATTERNS=[
+ // [regex, label, category index, what to do instead]
+ [/\bdelv(?:e|es|ed|ing)\b/gi,"delve",0,"Say 'look at', 'explain' or just state the point."],
+ [/\btapestr(?:y|ies)\b/gi,"tapestry",0,"Drop the metaphor. Say what the things are."],
+ [/\btestament to\b/gi,"testament to",0,"Say 'shows' or 'proves'."],
+ [/\brealm\b/gi,"realm",0,"Say 'area', 'field' or name it."],
+ [/\b(?:ever-evolving|ever-changing|rapidly evolving)\b/gi,"ever-evolving",0,"Cut it, or say what actually changed."],
+ [/\blandscape\b/gi,"landscape",0,"Say 'market', 'options' or name the thing."],
+ [/\bnavigat(?:e|es|ing) (?:the|through|this)\b/gi,"navigate the…",0,"Say 'deal with', 'choose' or 'handle'."],
+ [/\bembark(?:s|ed|ing)?\b/gi,"embark",0,"Say 'start'."],
+ [/\b(?:your|the|this) journey\b/gi,"journey",0,"Name the actual process."],
+ [/\bseamless(?:ly)?\b/gi,"seamless",0,"Say what makes it easy, specifically."],
+ [/\brobust\b/gi,"robust",0,"Say 'strong', 'reliable' or give the proof."],
+ [/\b(?:leverag|harness)(?:e|es|ed|ing)\b/gi,"leverage / harness",0,"Say 'use'."],
+ [/\bunlock(?:s|ed|ing)?\b/gi,"unlock",0,"Say 'get', 'open' or 'gain'."],
+ [/\bunleash(?:es|ed|ing)?\b/gi,"unleash",0,"Say 'use' or 'release'."],
+ [/\belevat(?:e|es|ed|ing)\b/gi,"elevate",0,"Say 'improve' and say how."],
+ [/\bempower(?:s|ed|ing)?\b/gi,"empower",0,"Say what the reader can now do."],
+ [/\bstreamlin(?:e|es|ed|ing)\b/gi,"streamline",0,"Say 'simplify' or 'speed up'."],
+ [/\bpivotal\b/gi,"pivotal",0,"Say 'key' or explain why it matters."],
+ [/\bparamount\b/gi,"paramount",0,"Say 'most important'."],
+ [/\b(?:crucial|vital)\b/gi,"crucial / vital",0,"Show why it matters instead of saying so."],
+ [/\bintricate\b/gi,"intricate",0,"Say 'complex' or 'detailed', or show it."],
+ [/\b(?:myriad|plethora)\b/gi,"myriad / plethora",0,"Say 'many' or give the number."],
+ [/\bmultifaceted\b/gi,"multifaceted",0,"Name the facets."],
+ [/\bholistic\b/gi,"holistic",0,"Say 'complete' or list what's covered."],
+ [/\bfoster(?:s|ed|ing)?\b/gi,"foster",0,"Say 'build', 'encourage' or 'help'."],
+ [/\bbolster(?:s|ed|ing)?\b/gi,"bolster",0,"Say 'strengthen' or 'support'."],
+ [/\bunderscor(?:e|es|ed|ing)\b/gi,"underscore",0,"Say 'shows' or 'highlights'."],
+ [/\bshowcas(?:e|es|ed|ing)\b/gi,"showcase",0,"Say 'show'."],
+ [/\bmeticulous(?:ly)?\b/gi,"meticulous",0,"Say 'careful', or describe the care."],
+ [/\bnuanced?\b/gi,"nuanced",0,"Spell out the detail you mean."],
+ [/\b(?:vibrant|bustling)\b/gi,"vibrant / bustling",0,"Use a concrete detail instead."],
+ [/\btransformative\b/gi,"transformative",0,"Say what changes, with an example."],
+ [/\brevolutioni[sz](?:e|es|ed|ing)\b/gi,"revolutionize",0,"Say what it changes, plainly."],
+ [/\bsynerg(?:y|ies)\b/gi,"synergy",0,"Say how the parts work together."],
+ [/\bparadigm\b/gi,"paradigm",0,"Say 'approach' or 'model'."],
+ [/\b(?:beacon|cornerstone|treasure trove|labyrinth|symphony)\b/gi,"beacon / cornerstone…",0,"Drop the metaphor and state the fact."],
+ [/\bresonat(?:e|es|ed|ing)\b/gi,"resonate",0,"Say 'matters to' or 'connects with'."],
+ [/\b(?:deep dive|dive into|diving into|dive deeper)\b/gi,"dive into",0,"Say 'look at' or start the explanation."],
+ [/\b(?:utili[sz](?:e|es|ed|ing)|facilitat(?:e|es|ed|ing))\b/gi,"utilize / facilitate",0,"Say 'use' or 'help'."],
+ [/\b(?:comprehensive|invaluable|noteworthy|commendable|endeavou?r)\b/gi,"comprehensive / invaluable…",0,"Cut it or replace with a specific claim."],
+ [/\bboasts?\b/gi,"boasts",0,"Say 'has'."],
+ [/\bit(?:'s| is) (?:important|crucial|essential|worth) (?:to note|noting|to remember|mentioning|to mention)\b/gi,"it's important to note",1,"Delete it and state the point."],
+ [/\bwhen it comes to\b/gi,"when it comes to",1,"Cut it: 'For fees, …' or start with the subject."],
+ [/\bat the end of the day\b/gi,"at the end of the day",1,"Cut it."],
+ [/\b(?:a wide|a broad|a diverse) (?:range|variety|array) of\b/gi,"a wide range of",1,"Name the things, or say 'many'."],
+ [/\bplays? an? (?:crucial|vital|pivotal|key|important|significant) role\b/gi,"plays a crucial role",1,"Say what it actually does."],
+ [/\bthe world of\b/gi,"the world of",1,"Cut it: 'cheque cashing', not 'the world of cheque cashing'."],
+ [/\b(?:rest assured|look no further)\b/gi,"rest assured / look no further",1,"Cut it and give the reassurance as a fact."],
+ [/\b(?:peace of mind|hassle-free|stress-free)\b/gi,"peace of mind / hassle-free",1,"Say what removes the hassle, specifically."],
+ [/\bnot only\b[^.?!]{1,80}\bbut also\b/gi,"not only… but also",1,"Use two plain sentences or 'and'."],
+ [/\b(?:is|are|isn't|aren't|it's) not (?:just|only|merely) (?:a|an|about)\b/gi,"it's not just X, it's Y",1,"State what it is directly."],
+ [/\bthe key (?:takeaway|is)\b/gi,"the key takeaway",1,"Just give the takeaway."],
+ [/(?:^|[.!?]\s+|\n)(?:Moreover|Furthermore|Additionally|Consequently|Notably|Importantly|Ultimately|Overall|Remember|Firstly|Secondly|Lastly|In essence|Essentially),/g,"Moreover, / Furthermore, …",2,"Cut the transition or use 'Also', 'So', 'But'."],
+ [/\b(?:in conclusion|in summary|to sum up|to summari[sz]e|all in all)\b/gi,"in conclusion",2,"Cut it. End with the next step instead."],
+ [/\bthat being said\b|\bwith that in mind\b|\bhaving said that\b/gi,"that being said",2,"Use 'But' or 'So', or cut it."],
+ [/\bin today'?s (?:fast-paced|digital|modern|ever-changing|competitive)? ?(?:world|age|era|landscape|market)\b/gi,"in today's fast-paced world",3,"Start with the reader's situation instead."],
+ [/\b(?:in this (?:article|guide|post|blog)|this (?:article|guide|post) (?:will|explores|covers))\b/gi,"in this article, we will…",3,"Skip the announcement. Start giving the answer."],
+ [/\b(?:let'?s (?:dive|explore|take a (?:closer )?look|break (?:it|this) down|get started)|without further ado|buckle up)\b/gi,"let's dive in",3,"Cut it and start."],
+ [/\b(?:ever wondered|have you ever wondered|imagine a world)\b/gi,"ever wondered…?",3,"Open with the reader's real situation."],
+ [/\bwhether you(?:'re| are) an? [^,.]{2,40},? or an? \b/gi,"whether you're a X or a Y",3,"Name the actual reader you're writing for."],
+ [/\b(?:happy (?:writing|reading|banking)|we hope this (?:article|guide) (?:helped|helps))\b/gi,"happy reading / hope this helped",3,"End with the next step, not a sign-off."],
+ [/\b(?:game-?changer|cutting-edge|state-of-the-art|next level|world-class|best-in-class|top-notch)\b/gi,"game-changer / cutting-edge…",4,"Replace with a specific, provable benefit."],
+ [/\b(?:take (?:your|it) (?:\w+ )?to the next level|unlock (?:the )?full potential)\b/gi,"take it to the next level",4,"Say exactly what improves."],
+ [/—|–(?= )| -- /g,"em dash",5,"Too many dashes read as AI. Use a full stop, comma or brackets.",3],
+ [/!(?=\s|$)/g,"exclamation mark",5,"Remove most of them. Let the content carry the energy.",3]
+];
+function aiScan(text){
+  const t=String(text||""),found=[];
+  AI_PATTERNS.forEach((p,i)=>{const re=new RegExp(p[0].source,p[0].flags);const m=t.match(re);const n=m?m.length:0;if(n&&n>=(p[4]||1))found.push({i,label:p[1],cat:p[2],tip:p[3],count:n})});
+  return found;
+}
+function aiActiveSet(text){return new Set(aiScan(text).map(f=>f.i))}
+function highlightAI(root,active){
+  if(!root)return;
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.parentNode.closest("mark.ai,code")?NodeFilter.FILTER_REJECT:NodeFilter.FILTER_ACCEPT});
+  const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+  nodes.forEach(node=>{
+    const t=node.nodeValue,ranges=[];
+    AI_PATTERNS.forEach((p,i)=>{if(!active.has(i))return;const re=new RegExp(p[0].source,p[0].flags.includes("g")?p[0].flags:p[0].flags+"g");let m;while((m=re.exec(t))){let st=m.index,txt=m[0];const lead=txt.match(/^(?:[.!?]\s+|\n)/);if(lead){st+=lead[0].length;txt=txt.slice(lead[0].length)}if(txt)ranges.push([st,st+txt.length,i]);if(!m[0].length)re.lastIndex++}});
+    if(!ranges.length)return;
+    ranges.sort((a,b)=>a[0]-b[0]||b[1]-a[1]);
+    const keep=[];let end=-1;ranges.forEach(r=>{if(r[0]>=end){keep.push(r);end=r[1]}});
+    const frag=document.createDocumentFragment();let pos=0;
+    keep.forEach(([a,b,i])=>{if(a>pos)frag.appendChild(document.createTextNode(t.slice(pos,a)));const mk=document.createElement("mark");mk.className="ai";mk.dataset.p=i;mk.tabIndex=0;mk.textContent=t.slice(a,b);frag.appendChild(mk);pos=b});
+    if(pos<t.length)frag.appendChild(document.createTextNode(t.slice(pos)));
+    node.parentNode.replaceChild(frag,node);
+  });
+}
+let aiPopT;
+function aiPop(i){
+  const p=AI_PATTERNS[i];if(!p)return;let el=$("#aiPop");
+  if(!el){el=document.createElement("div");el.id="aiPop";el.className="aipop";el.setAttribute("role","status");document.body.appendChild(el)}
+  el.innerHTML=`<b>${esc(p[1])}</b> · ${esc(AI_CATS[p[2]])}<br>${esc(p[3])}`;el.hidden=false;
+  clearTimeout(aiPopT);aiPopT=setTimeout(()=>el.hidden=true,4500);
+}
+document.addEventListener("click",e=>{const m=e.target.closest("mark.ai");if(m&&!m.closest(".aioff"))aiPop(+m.dataset.p)});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"){const m=e.target.closest&&e.target.closest("mark.ai");if(m)aiPop(+m.dataset.p)}});
+const aiJump={};
+function renderAIPanel(){
+  const d=D(),text=d.draft||"",blk=$("#aiBlock");
+  if(!blk)return;
+  blk.hidden=!text.trim();if(!text.trim())return;
+  const found=aiScan(text),total=found.reduce((a,f)=>a+f.count,0),words=Math.max(1,wc(text)),per=total/words*1000;
+  const v=$("#aiVerdict");
+  if(per<=3){v.className="aiverdict good";v.textContent="Reads human"}else if(per<=8){v.className="aiverdict mid";v.textContent="Some AI tells"}else{v.className="aiverdict bad";v.textContent="Heavy AI patterns"}
+  $("#aiSummary").textContent=total?`${total} AI-sounding ${total===1?"word or phrase":"words and phrases"} across ${found.length} pattern${found.length>1?"s":""} (${per.toFixed(1)} per 1,000 words). Change the ones that don't sound like a person talking.`:"No common AI patterns found. Still read it aloud once: if a sentence sounds like a brochure, rewrite it.";
+  $("#aiList").innerHTML=AI_CATS.map((c,ci)=>{const rows=found.filter(f=>f.cat===ci).sort((a,b)=>b.count-a.count);if(!rows.length)return "";return `<div class="aicat"><h3>${esc(c)}</h3>${rows.map(f=>`<button type="button" class="airow" data-aijump="${f.i}"><b>${esc(f.label)}</b><span class="cnt">×${f.count}</span><span class="tip">${esc(f.tip)}</span></button>`).join("")}</div>`}).join("");
+  $("#aiFixWrap").hidden=!total;
+  const art=$("#draftOut");art.classList.toggle("aioff",!$("#aiToggle").checked);
+}
+document.addEventListener("click",e=>{
+  const r=e.target.closest("[data-aijump]");if(!r)return;
+  const i=r.dataset.aijump;if(!$("#aiToggle").checked){$("#aiToggle").checked=true;$("#draftOut").classList.remove("aioff")}
+  const marks=[...document.querySelectorAll(`#draftOut mark.ai[data-p="${i}"]`)];if(!marks.length)return;
+  aiJump[i]=((aiJump[i]??-1)+1)%marks.length;const m=marks[aiJump[i]];
+  m.scrollIntoView({behavior:"smooth",block:"center"});document.querySelectorAll("mark.ai.flash").forEach(x=>x.classList.remove("flash"));m.classList.add("flash");setTimeout(()=>m.classList.remove("flash"),1600);
+  toast(`${aiJump[i]+1} of ${marks.length}`);
+});
+document.addEventListener("change",e=>{if(e.target.id==="aiToggle")$("#draftOut").classList.toggle("aioff",!e.target.checked)});
+function aifixPrompt(){
+  const d=D(),found=aiScan(d.draft);
+  return `You are a top human editor. The article below contains phrases that readers recognise as AI-written. Rewrite ONLY the sentences that contain them so they sound like a knowledgeable person talking. Keep every other sentence exactly as it is, including headings, structure, facts and [verify: ...] placeholders.
+
+PATTERNS FOUND (with what to do instead):
+${found.map(f=>`- "${f.label}" ×${f.count}: ${f.tip}`).join("\n")}
+
+Rules:
+- Plain, specific words. Short sentences. No new AI-pattern words such as delve, seamless, robust, leverage, unlock, elevate, crucial, vital, pivotal, comprehensive, landscape, journey, game-changer, "it's important to note", "moreover", "furthermore", "in conclusion".
+- Use full stops or commas instead of em dashes. Remove most exclamation marks.
+- Never invent facts, figures or names.
+
+ARTICLE:
+"""
+${(d.draft||"").slice(0,60000)}
+"""
+
+Output only the complete revised article in Markdown. No preamble.`;
+}
 // ================= AI: Architect + Coach =================
 const FRAMEWORK=`THE WRITER'S FRAMEWORK (follow it strictly)
 1. Brief first: topic, business/editorial goal, primary reader, the problem that brought them, the search intent to satisfy, what they should understand by the end, evidence needed, tone, next step.
@@ -1036,7 +1214,7 @@ const WRITING_RULES=`- Start with "# " and the best title, then the opening para
 - Every paragraph does one job. Keep paragraphs short (2-4 sentences). Use bullets for steps or lists and a Markdown table where readers compare options.
 - Explain what each fact means for the reader. Use concrete, realistic examples and scenarios.
 - NEVER invent statistics, prices, fees, limits, dates, laws, names of branches or quotes. Wherever a specific fact is needed, write [verify: what to check] inline instead.
-- No filler or hype: no "very", "really", "in today's world", "it's important to note", "seamless", "leverage", "unlock", "game-changer".
+- Sound like a person, not an AI. Never use: delve, tapestry, testament, realm, landscape, ever-evolving, navigate, embark, journey, seamless, robust, leverage, harness, unlock, unleash, elevate, empower, streamline, pivotal, paramount, crucial, vital, myriad, plethora, multifaceted, holistic, foster, bolster, underscore, showcase, meticulous, vibrant, transformative, comprehensive, game-changer, cutting-edge, "it's important to note", "when it comes to", "a wide range of", "plays a crucial role", "not only… but also", "it's not just X, it's Y", "in today's fast-paced world", "in this article we will", "let's dive in", "whether you're a… or a…", "moreover", "furthermore", "additionally", "in conclusion", "rest assured", "peace of mind", "hassle-free". Use few em dashes and almost no exclamation marks. No filler such as "very" or "really".
 - Match the tone and voice guide and any regional spelling implied by the notes.
 - End naturally with the next step for the reader.`;
 function writePrompt(){const d=D();return `You are a top professional writer and ghostwriter. Write the complete article using the expert structure, the brief and the framework below.
@@ -1127,11 +1305,12 @@ let editingDraft=false;
 function renderDraft(){
   const d=D(),has=!!(d.draft||"").trim();
   $("#writeBlock").hidden=!d.arch;
-  $("#draftWrap").hidden=!has;$("#checkBlock").hidden=!has;
+  $("#draftWrap").hidden=!has;$("#checkBlock").hidden=!has;$("#aiBlock").hidden=!has;
   if(!has)return;
   const v=(d.draft.match(/\[verify:/gi)||[]).length;
   $("#draftMeta").textContent=`${wc(d.draft).toLocaleString()} words · about ${Math.max(1,Math.round(wc(d.draft)/230))} min read${v?` · ${v} fact${v>1?"s":""} to verify`:""}`;
-  if(!editingDraft)$("#draftOut").innerHTML=mdArticle(d.draft);
+  if(!editingDraft){$("#draftOut").innerHTML=mdArticle(d.draft);highlightAI($("#draftOut"),aiActiveSet(d.draft))}
+  renderAIPanel();
   $("#draftUndo").hidden=!d.draftPrev;
 }
 function renderCheck(){
@@ -1180,6 +1359,9 @@ $("#reviseGo").onclick=()=>aiStream({go:"#reviseGo",stop:"#reviseStop",status:"#
   onText:({text},st)=>{st.innerHTML=`<span class="pulse"></span>Rewriting… ${wc(text).toLocaleString()} words`},
   done:({text},st)=>{setDraft(text,true);toast("Fixes applied. Check it again to see the new score.");$("#draftWrap").scrollIntoView({behavior:"smooth",block:"start"})}});
 
+$("#aifixGo").onclick=()=>aiStream({go:"#aifixGo",stop:"#aifixStop",status:"#aifixStatus",prompt:aifixPrompt(),busy:"Rewriting the AI-sounding sentences…",
+  onText:({text},st)=>{st.innerHTML=`<span class="pulse"></span>Rewriting… ${wc(text).toLocaleString()} words`},
+  done:({text})=>{const before=aiScan(D().draft).reduce((a,f)=>a+f.count,0);setDraft(text,true);const after=aiScan(D().draft).reduce((a,f)=>a+f.count,0);toast(`AI patterns: ${before} → ${after}`);$("#aiBlock").scrollIntoView({behavior:"smooth",block:"start"})}});
 $("#draftCopy").onclick=()=>copy(D().draft||"");
 $("#draftEditBtn").onclick=()=>{editingDraft=!editingDraft;const ta=$("#f_draft");ta.hidden=!editingDraft;$("#draftOut").hidden=editingDraft;$("#draftEditBtn").textContent=editingDraft?"Done":"Edit text";if(editingDraft){ta.value=D().draft||"";ta.focus()}else renderDraft()};
 $("#draftUndo").onclick=()=>{const d=D();if(!d.draftPrev)return;d.draft=d.draftPrev;delete d.draftPrev;d.check=null;save();renderDraft();renderCheck();toast("Restored the previous draft")};
@@ -1187,6 +1369,7 @@ $("#draftToEdit").onclick=()=>{D().e_text=D().draft||"";save();$("#f_e_text").va
 
 // No-key copy/paste for each step
 const MANUAL={
+  aifix:{prompt:()=>aifixPrompt(),load:t=>{if(wc(t)<80)return "That looks too short to be the full article.";setDraft(t.replace(/^```(?:markdown|md)?\s*|```\s*$/g,""),true)}},
   write:{prompt:()=>writePrompt(),load:t=>{if(wc(t)<80)return "That looks too short to be the full article.";setDraft(t.replace(/^```(?:markdown|md)?\s*|```\s*$/g,""),false)}},
   check:{prompt:()=>checkPrompt()+"\n\nOutput the JSON inside a single ```json code block, with nothing else.",load:t=>{const r=parseLoose(t);if(!r||!("score" in r))return "That doesn't look like the full check. Copy Claude's whole reply.";D().check=r;save();renderCheck()}},
   revise:{prompt:()=>revisePrompt(),load:t=>{if(wc(t)<80)return "That looks too short to be the full article.";setDraft(t.replace(/^```(?:markdown|md)?\s*|```\s*$/g,""),true)}}

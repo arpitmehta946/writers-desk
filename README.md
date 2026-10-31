@@ -4,6 +4,7 @@ A phone-first app for planning, researching and editing articles like a top writ
 
 - **Article Architect:** type a topic and get the structure an expert would use: search intent, reader types, section-by-section flow and why each part sits where it does.
 - **Write, check, fix:** Claude writes the full article from the structure, a strict editor scores it against the framework, and one tap applies the fixes.
+- **AI-pattern check:** every article is scanned for common AI-sounding words and phrases (delve, seamless, "it's important to note", em dashes…), highlighted in place with a better alternative and a one-tap rewrite.
 - **Expert Coach:** paste your draft for prioritised fixes with before/after rewrites.
 - **Brief, Research, Reader, Hook, Edit and Voice** worksheets.
 

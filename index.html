@@ -32,6 +32,7 @@
   --accent:#8fa3ff; --accent-soft:#232a45; --mark:#6a5c14; --ok:#72cf98; --warn:#f0a36a; color-scheme:dark}
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
 .wrap{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 120px}
@@ -162,6 +163,41 @@ nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--sur
 .md p{margin:0 0 8px}
 .md ul{margin:0 0 8px;padding-left:20px}
 .md blockquote{margin:0 0 8px;border-left:3px solid var(--line);padding-left:10px;color:var(--muted)}
+.pipeline{display:flex;flex-direction:column;gap:22px;margin-top:22px}
+.draftbar{display:flex;flex-direction:column;gap:8px}
+.draftedit{min-height:420px;font-family:var(--mono);font-size:14px;line-height:1.5}
+.article{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px 16px;font-size:17px;line-height:1.65;overflow-wrap:anywhere}
+.article h1{font-family:var(--display);font-size:clamp(24px,6vw,30px);line-height:1.15;margin:0 0 14px;text-wrap:balance}
+.article h2{font-family:var(--display);font-size:21px;margin:26px 0 8px;text-wrap:balance}
+.article h3{font-family:var(--display);font-size:17px;margin:18px 0 6px}
+.article p{margin:0 0 12px}
+.article ul,.article ol{margin:0 0 12px;padding-left:22px}
+.article li{margin-bottom:4px}
+.article blockquote{margin:0 0 12px;border-left:3px solid var(--accent);padding-left:12px;color:var(--muted)}
+.article .tbl{overflow-x:auto;margin:0 0 14px}
+.article table{border-collapse:collapse;font-size:15px;min-width:100%}
+.article th,.article td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+.article th{font-family:var(--display);background:var(--accent-soft)}
+mark.verify{background:var(--mark);color:var(--ink);font-family:var(--mono);font-size:.82em;padding:1px 4px;border-radius:3px}
+.score{display:flex;gap:14px;align-items:center}
+.score .big{font-family:var(--display);font-weight:700;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.score .big small{font-size:18px;color:var(--muted)}
+.score p{margin:0;font-size:15px}
+.chk{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:15px}
+.chk:last-child{border-bottom:0}
+.chk b{font-family:var(--display);font-weight:500}
+.chk span.note{grid-column:2;color:var(--muted);font-size:14px}
+.pill{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:999px;border:1px solid currentColor;align-self:start;margin-top:2px;white-space:nowrap}
+.pill.pass{color:var(--ok)} .pill.warn{color:var(--warn)} .pill.fail{color:var(--warn);background:var(--mark)}
+.pill.high{color:var(--warn);background:var(--mark)} .pill.medium{color:var(--warn)} .pill.low{color:var(--muted)}
+.issue{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-bottom:1px solid var(--line);font-size:15px}
+.issue:last-child{border-bottom:0}
+.issue .where{color:var(--muted);font-style:italic}
+.issue .fix{color:var(--ink)}
+.issue .fix b{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ok);font-weight:500}
+.checkres{display:flex;flex-direction:column;gap:16px;margin-top:6px}
+.checkres h3{font-family:var(--display);font-size:16px;margin:0 0 4px}
+.checkres ul{margin:0;padding-left:20px;font-size:15px}
 .manual{display:flex;flex-direction:column;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
 .manual h2{font-size:18px}
 .step{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:start}
@@ -253,6 +289,57 @@ header.bar{max-height:75vh;overflow-y:auto}
       <div class="step"><span class="n">2</span><div><p class="help" style="margin-bottom:6px">When Claude answers, copy its whole reply and paste it here.</p><textarea id="archPaste" placeholder="Paste Claude's answer here" style="min-height:90px"></textarea><div class="row" style="margin-top:8px"><button class="btn" type="button" id="archLoad">Show the structure</button><span class="status" id="archPasteStatus"></span></div></div></div>
     </div>
     <div class="result" id="archOut"></div>
+
+    <div id="writeBlock" class="pipeline" hidden>
+      <div class="rsec">
+        <div class="eyebrow">Step 2 · Write</div>
+        <h2>Write the full article</h2>
+        <p class="help">Claude writes the draft from this structure, plus your brief, reader profiles and voice notes. Facts it can't be sure of are marked <mark class="verify">[verify: …]</mark>, never made up.</p>
+        <div class="field"><label>Length</label><div class="chips" id="lenChips" role="group" aria-label="Length"></div></div>
+        <div class="field"><label for="f_a_extra">Extra instructions (optional)</label><textarea id="f_a_extra" data-k="a_extra" placeholder="e.g. Mention our 3 Toronto branches. Canadian spelling. Add a short FAQ at the end."></textarea></div>
+        <div class="aibar"><button class="btn" type="button" id="writeGo">Write the article</button><button class="btn ghost" type="button" id="writeStop" hidden>Stop</button><span class="status" id="writeStatus"></span></div>
+        <div class="manual" id="writeManual" hidden>
+        <p class="help"><b>No API key?</b> Have Claude write it in your Claude app.</p>
+        <div class="step"><span class="n">1</span><div><div class="row"><button class="btn" type="button" data-mcopy="write">Copy prompt</button><a class="btn ghost" href="https://claude.ai/new" target="_blank" rel="noopener">Open Claude</a></div><p class="help">Paste into a new chat and send.</p></div></div>
+        <div class="step"><span class="n">2</span><div><textarea id="writePaste" placeholder="Paste the article Claude wrote" style="min-height:80px"></textarea><div class="row" style="margin-top:8px"><button class="btn" type="button" data-mload="write">Use this draft</button><span class="status" id="writePasteStatus"></span></div></div></div>
+      </div>
+      </div>
+
+      <div class="rsec" id="draftWrap" hidden>
+        <div class="draftbar">
+          <span class="status" id="draftMeta"></span>
+          <div class="row">
+            <button class="iconbtn" type="button" id="draftCopy">Copy</button>
+            <button class="iconbtn" type="button" id="draftEditBtn">Edit text</button>
+            <button class="iconbtn" type="button" id="draftUndo" hidden>Undo fixes</button>
+            <button class="iconbtn" type="button" id="draftToEdit">Open in Edit desk</button>
+          </div>
+        </div>
+        <textarea id="f_draft" data-k="draft" class="draftedit" hidden aria-label="Article text (Markdown)"></textarea>
+        <article class="article" id="draftOut"></article>
+      </div>
+
+      <div class="rsec" id="checkBlock" hidden>
+        <div class="eyebrow">Step 3 · Check</div>
+        <h2>Check it with AI</h2>
+        <p class="help">A strict editor scores the draft against your framework, lists what to fix, and flags every claim you must verify before publishing.</p>
+        <div class="aibar"><button class="btn" type="button" id="checkGo">Check the article</button><button class="btn ghost" type="button" id="checkStop" hidden>Stop</button><span class="status" id="checkStatus"></span></div>
+        <div class="manual" id="checkManual" hidden>
+        <p class="help"><b>No API key?</b> Run the check in your Claude app.</p>
+        <div class="step"><span class="n">1</span><div><div class="row"><button class="btn" type="button" data-mcopy="check">Copy prompt</button><a class="btn ghost" href="https://claude.ai/new" target="_blank" rel="noopener">Open Claude</a></div><p class="help">Paste into a new chat and send.</p></div></div>
+        <div class="step"><span class="n">2</span><div><textarea id="checkPaste" placeholder="Paste Claude's check result" style="min-height:80px"></textarea><div class="row" style="margin-top:8px"><button class="btn" type="button" data-mload="check">Show the check</button><span class="status" id="checkPasteStatus"></span></div></div></div>
+      </div>
+        <div id="checkOut"></div>
+        <div id="reviseWrap" hidden>
+          <div class="aibar" style="margin-top:6px"><button class="btn" type="button" id="reviseGo">Fix these issues</button><button class="btn ghost" type="button" id="reviseStop" hidden>Stop</button><span class="status" id="reviseStatus"></span></div>
+          <div class="manual" id="reviseManual" hidden>
+        <p class="help"><b>No API key?</b> Have Claude apply the fixes in your Claude app.</p>
+        <div class="step"><span class="n">1</span><div><div class="row"><button class="btn" type="button" data-mcopy="revise">Copy prompt</button><a class="btn ghost" href="https://claude.ai/new" target="_blank" rel="noopener">Open Claude</a></div><p class="help">Paste into a new chat and send.</p></div></div>
+        <div class="step"><span class="n">2</span><div><textarea id="revisePaste" placeholder="Paste the revised article" style="min-height:80px"></textarea><div class="row" style="margin-top:8px"><button class="btn" type="button" data-mload="revise">Use revised draft</button><span class="status" id="revisePasteStatus"></span></div></div></div>
+      </div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -768,7 +855,7 @@ Reply with only one JSON object in exactly this shape:
 
 function renderArch(r){
   const o=$("#archOut");
-  if(!r){o.innerHTML="";return}
+  if(!r){o.innerHTML="";if(window.renderDraft){renderDraft();renderCheck()}return}
   const L=a=>Array.isArray(a)?a:[];
   const li=a=>L(a).filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join("");
   const sec=(t,b)=>`<div class="rsec"><h2>${t}</h2>${b}</div>`;
@@ -785,9 +872,11 @@ function renderArch(r){
   if(L(r.evidence).length)h+=sec("Evidence to gather",`<ul>${L(r.evidence).map(e=>`<li>${esc(e.need||"")}${e.source?` <span style="color:var(--muted)">(${esc(e.source)})</span>`:""}</li>`).join("")}</ul>`);
   if(L(r.pitfalls).length)h+=sec("Mistakes to avoid",`<ul>${li(r.pitfalls)}</ul>`);
   if(r.cta||r.length)h+=sec("Ending",`<dl class="kv"><dt>Next step</dt><dd>${esc(r.cta||"")}</dd><dt>Length</dt><dd>${esc(r.length||"")}</dd></dl>`);
-  h+=`<div class="row"><button class="btn" type="button" id="archUse">Use this in my brief</button><button class="btn ghost" type="button" id="archCopy">Copy outline</button><button class="btn ghost" type="button" id="archAgain">Try another angle</button></div>`;
+  h+=`<div class="row"><button class="btn" type="button" id="archUse">Use this in my brief</button><button class="btn" type="button" id="archToWrite">Write this article ↓</button><button class="btn ghost" type="button" id="archCopy">Copy outline</button><button class="btn ghost" type="button" id="archAgain">Try another angle</button></div>`;
   o.innerHTML=h;
+  if(window.renderDraft){renderLen();renderDraft();renderCheck()}
   $("#archUse").onclick=()=>useArch(r);
+  $("#archToWrite").onclick=()=>$("#writeBlock").scrollIntoView({behavior:"smooth",block:"start"});
   $("#archCopy").onclick=()=>copy(archMd(r));
   $("#archAgain").onclick=()=>runArch(true);
 }
@@ -904,7 +993,7 @@ async function runCoach(){
 
 
 // ---- No-key mode: copy prompt to the Claude app, paste the answer back ----
-function showManual(){$("#archManual").hidden=false;$("#coachManual").hidden=false}
+function showManual(){document.querySelectorAll(".manual").forEach(m=>m.hidden=false)}
 function parseLoose(t){
   t=String(t||"").trim();try{return JSON.parse(t)}catch(e){}
   const f=t.match(/```(?:json)?\s*([\s\S]*?)```/);if(f){try{return JSON.parse(f[1])}catch(e){}}
@@ -924,12 +1013,196 @@ $("#archLoad").onclick=()=>{
 };
 $("#coachAsk").onclick=()=>{if((D().e_text||"").trim().split(/\s+/).length<15){$("#f_e_text").focus();toast("Paste at least a paragraph first");return}copyPrompt(coachPrompt(),"Prompt")};
 $("#coachLoad").onclick=()=>{const t=$("#coachPaste").value.trim();if(!t)return;D().coach=t;save();$("#coachOut").innerHTML=mdToHtml(t);$("#coachPaste").value="";toast("Feedback saved")};
+
+// ================= Write → Check → Fix pipeline =================
+const LENGTHS=["As suggested","Short (~800 words)","Standard (~1,500 words)","Long (~2,500 words)"];
+function renderLen(){const cur=D().a_len||LENGTHS[0];$("#lenChips").innerHTML=LENGTHS.map(f=>`<button type="button" class="chip" data-len="${esc(f)}" aria-pressed="${f===cur}">${esc(f)}</button>`).join("")}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-len]");if(!b)return;D().a_len=b.dataset.len;save();renderLen()});
+
+function ctxLines(){
+  const d=D(),c=[];
+  BRIEF.forEach(b=>{if((d["b_"+b[0]]||"").trim())c.push(`${b[1]} ${d["b_"+b[0]]}`)});
+  [1,2,3].forEach(n=>{if((d[`r${n}_name`]||"").trim())c.push(`Reader ${n}: ${d[`r${n}_name`]}. Concern: ${d[`r${n}_concern`]||"?"}. Goal: ${d[`r${n}_goal`]||"?"}. Needs first: ${d[`r${n}_first`]||"?"}`)});
+  const v=VFIELDS.filter(f=>(d[f[0]]||"").trim()).map(f=>`${f[1]}: ${d[f[0]]}`);
+  if((d.v_who||"").trim())v.unshift(`Writing as: ${d.v_who}`);
+  if(v.length)c.push("VOICE GUIDE:\n"+v.join("\n"));
+  if((d.a_ctx||"").trim())c.push("Writer's notes: "+d.a_ctx);
+  return c.join("\n");
+}
+function archCompact(){const r=D().arch||{};return JSON.stringify({titles:r.titles,intent:r.intent,readers:r.readers,angle:r.angle,takeaway:r.takeaway,tone:r.tone,hook:r.hook,outline:r.outline,flow_logic:r.flow_logic,reader_questions:r.reader_questions,pitfalls:r.pitfalls,cta:r.cta,length:r.length})}
+function lengthLine(){const l=D().a_len||LENGTHS[0];return l===LENGTHS[0]?((D().arch||{}).length||"whatever the structure suggests"):l}
+const WRITING_RULES=`- Start with "# " and the best title, then the opening paragraph (build on the suggested opening). Give the direct answer to the main question within the first 150 words.
+- Follow the outline's sections in order as "## " headings, with "### " sub-headings where given. You may sharpen heading wording for clarity and search intent.
+- Every paragraph does one job. Keep paragraphs short (2-4 sentences). Use bullets for steps or lists and a Markdown table where readers compare options.
+- Explain what each fact means for the reader. Use concrete, realistic examples and scenarios.
+- NEVER invent statistics, prices, fees, limits, dates, laws, names of branches or quotes. Wherever a specific fact is needed, write [verify: what to check] inline instead.
+- No filler or hype: no "very", "really", "in today's world", "it's important to note", "seamless", "leverage", "unlock", "game-changer".
+- Match the tone and voice guide and any regional spelling implied by the notes.
+- End naturally with the next step for the reader.`;
+function writePrompt(){const d=D();return `You are a top professional writer and ghostwriter. Write the complete article using the expert structure, the brief and the framework below.
+
+${FRAMEWORK}
+
+EXPERT STRUCTURE (JSON):
+${archCompact()}
+
+BRIEF, READERS AND VOICE:
+${ctxLines()||"(none given)"}
+
+TARGET LENGTH: ${lengthLine()}
+${(d.a_extra||"").trim()?"EXTRA INSTRUCTIONS FROM THE WRITER: "+d.a_extra+"\n":""}
+Rules:
+${WRITING_RULES}
+
+Output only the finished article in Markdown. No preamble, no notes after it.`}
+
+const CHECKS=["Answers the main question early","Matches the search intent","Written for the specific reader","Hook: recognition, relevance, reward","Every paragraph does a job","Specific, not vague","Flow: know, decide, act","Explains implications","Uses concrete examples","Scannable structure","Clear next step","Tone and voice"];
+function checkPrompt(){const d=D();return `You are a strict senior editor. Check this article against the framework, its expert structure and its brief. Be honest and specific; do not inflate the score. A 9-10 means ready to publish at a top-publication standard.
+
+${FRAMEWORK}
+
+EXPERT STRUCTURE (JSON): ${archCompact()}
+
+BRIEF, READERS AND VOICE:
+${ctxLines()||"(none given)"}
+
+ARTICLE:
+"""
+${(d.draft||"").slice(0,60000)}
+"""
+
+Reply with only one JSON object:
+{"score": integer 1-10,
+"verdict": "two sentences: overall quality and the single biggest weakness",
+"checks": [{"name": "...", "status": "pass|warn|fail", "note": "one specific sentence"}],
+"issues": [{"severity": "high|medium|low", "where": "section heading or a short quote", "problem": "what is wrong and why it matters to the reader", "fix": "exactly what to change"}],
+"verify": ["every factual claim, figure or [verify] placeholder the writer must confirm with a primary source before publishing"],
+"filler": ["vague or filler phrases found, quoted exactly"]}
+Use exactly these check names, in this order: ${JSON.stringify(CHECKS)}.
+Give at most 8 issues, most important first. At most 10 filler phrases.`}
+
+function revisePrompt(){const d=D(),c=d.check||{};return `You are a top professional writer. Revise the article below so it fixes every issue the editor found, while keeping everything that already works, the structure, and the writer's voice.
+
+${FRAMEWORK}
+
+BRIEF, READERS AND VOICE:
+${ctxLines()||"(none given)"}
+
+EDITOR'S ISSUES TO FIX:
+${(c.issues||[]).map((i,n)=>`${n+1}. [${i.severity}] ${i.where}: ${i.problem} FIX: ${i.fix}`).join("\n")||"(general tightening)"}
+${(c.filler||[]).length?"FILLER TO REMOVE OR REPLACE: "+c.filler.join(" | "):""}
+${(c.checks||[]).filter(x=>x.status!=="pass").map(x=>`WEAK CHECK: ${x.name}: ${x.note}`).join("\n")}
+
+Rules:
+${WRITING_RULES}
+- Keep [verify: ...] placeholders unless the fix removes the claim. Never replace them with invented facts.
+
+ARTICLE:
+"""
+${(d.draft||"").slice(0,60000)}
+"""
+
+Output only the complete revised article in Markdown. No preamble.`}
+
+function inlineMd(s){return s.replace(/\[verify:([^\]]*)\]/gi,'<mark class="verify">[verify:$1]</mark>').replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/(^|[^*])\*(?!\s)(.+?)\*/g,"$1<em>$2</em>").replace(/`([^`]+)`/g,"<code>$1</code>").replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>')}
+function mdArticle(t){
+  const L=esc(t||"").split("\n");let h="",list=null,tbl=[];
+  const closeList=()=>{if(list){h+=`</${list}>`;list=null}};
+  const flushTbl=()=>{if(!tbl.length)return;const rows=tbl.filter(r=>!/^\|?\s*:?-{2,}/.test(r.replace(/\s/g,"")));h+='<div class="tbl"><table>'+rows.map((r,i)=>{const cells=r.replace(/^\||\|$/g,"").split("|").map(c=>inlineMd(c.trim()));const tag=i===0?"th":"td";return "<tr>"+cells.map(c=>`<${tag}>${c}</${tag}>`).join("")+"</tr>"}).join("")+"</table></div>";tbl=[]};
+  for(const raw of L){const l=raw.trim();
+    if(l.startsWith("|")){closeList();tbl.push(l);continue}else flushTbl();
+    let m;
+    if((m=l.match(/^[-*•]\s+(.*)/))){if(list!=="ul"){closeList();h+="<ul>";list="ul"}h+=`<li>${inlineMd(m[1])}</li>`;continue}
+    if((m=l.match(/^\d+[.)]\s+(.*)/))){if(list!=="ol"){closeList();h+="<ol>";list="ol"}h+=`<li>${inlineMd(m[1])}</li>`;continue}
+    closeList();
+    if((m=l.match(/^(#{1,4})\s+(.*)/))){const lv=Math.min(3,m[1].length);h+=`<h${lv}>${inlineMd(m[2])}</h${lv}>`}
+    else if((m=l.match(/^&gt;\s?(.*)/)))h+=`<blockquote>${inlineMd(m[1])}</blockquote>`;
+    else if(/^(-{3,}|\*{3,})$/.test(l))h+="";
+    else if(l)h+=`<p>${inlineMd(l)}</p>`;
+  }
+  closeList();flushTbl();return h;
+}
+function wc(t){return ((t||"").match(/\b[\w'’-]+\b/g)||[]).length}
+let editingDraft=false;
+function renderDraft(){
+  const d=D(),has=!!(d.draft||"").trim();
+  $("#writeBlock").hidden=!d.arch;
+  $("#draftWrap").hidden=!has;$("#checkBlock").hidden=!has;
+  if(!has)return;
+  const v=(d.draft.match(/\[verify:/gi)||[]).length;
+  $("#draftMeta").textContent=`${wc(d.draft).toLocaleString()} words · about ${Math.max(1,Math.round(wc(d.draft)/230))} min read${v?` · ${v} fact${v>1?"s":""} to verify`:""}`;
+  if(!editingDraft)$("#draftOut").innerHTML=mdArticle(d.draft);
+  $("#draftUndo").hidden=!d.draftPrev;
+}
+function renderCheck(){
+  const c=D().check,o=$("#checkOut");
+  if(!c){o.innerHTML="";$("#reviseWrap").hidden=true;return}
+  const L=a=>Array.isArray(a)?a:[];
+  const sc=Math.max(0,Math.min(10,parseInt(c.score)||0));
+  const order={high:0,medium:1,low:2};
+  let h=`<div class="checkres"><div class="score"><div class="big">${sc}<small>/10</small></div><p>${esc(c.verdict||"")}</p></div>`;
+  if(L(c.checks).length)h+=`<div><h3>Framework checks</h3>${L(c.checks).map(x=>{const st=["pass","warn","fail"].includes(x.status)?x.status:"warn";return `<div class="chk"><span class="pill ${st}">${st==="pass"?"Pass":st==="warn"?"Weak":"Fail"}</span><b>${esc(x.name||"")}</b><span class="note">${esc(x.note||"")}</span></div>`}).join("")}</div>`;
+  if(L(c.issues).length)h+=`<div><h3>What to fix</h3>${L(c.issues).slice().sort((a,b)=>(order[a.severity]??1)-(order[b.severity]??1)).map(i=>{const sv=["high","medium","low"].includes(i.severity)?i.severity:"medium";return `<div class="issue"><div><span class="pill ${sv}">${sv}</span></div><span class="where">${esc(i.where||"")}</span><span>${esc(i.problem||"")}</span><span class="fix"><b>Fix</b> · ${esc(i.fix||"")}</span></div>`}).join("")}</div>`;
+  if(L(c.verify).length)h+=`<div><h3>Verify before publishing</h3><ul>${L(c.verify).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`;
+  if(L(c.filler).length)h+=`<div><h3>Filler found</h3><p class="help">${L(c.filler).map(x=>`<mark>${esc(x)}</mark>`).join(" · ")}</p></div>`;
+  o.innerHTML=h+"</div>";
+  $("#reviseWrap").hidden=!L(c.issues).length&&!L(c.filler).length&&!L(c.checks).some(x=>x.status!=="pass");
+}
+
+async function aiStream({go,stop,status,prompt,json,busy,onText,done}){
+  if(!sampleFn){hideAI();return}
+  const ctl=new AbortController(),st=$(status);
+  $(go).disabled=true;$(stop).hidden=false;$(stop).onclick=()=>ctl.abort();
+  st.className="status";st.innerHTML=`<span class="pulse"></span>${busy}`;
+  try{
+    const opts={signal:ctl.signal,cache:false,onText:x=>{if(onText)onText(x,st)}};
+    const r=json?await sampleFn.json(prompt,opts):await sampleFn(prompt,opts);
+    st.textContent="";done(r,st);
+  }catch(e){
+    if(e&&e.code==="cancelled"){st.textContent="Stopped."}
+    else{st.className="status err";st.textContent=errCopy(e&&e.code);if(e&&["bad_key","no_credit","rate_limited","sampling_disabled"].includes(e.code))showManual();if(e&&["not_granted","sampling_disabled","not_declared","capability_disabled"].includes(e.code))hideAI()}
+  }finally{$(go).disabled=!sampleFn;$(stop).hidden=true}
+}
+function setDraft(text,keepPrev){const d=D();if(keepPrev&&d.draft)d.draftPrev=d.draft;else delete d.draftPrev;d.draft=text.trim();d.check=null;P().updated=Date.now();save();editingDraft=false;$("#f_draft").hidden=true;$("#draftEditBtn").textContent="Edit text";$("#f_draft").value=d.draft;renderDraft();renderCheck()}
+
+$("#writeGo").onclick=()=>{
+  if(D().draft&&!$("#writeGo").dataset.sure){$("#writeGo").dataset.sure="1";$("#writeGo").textContent="Replace current draft?";setTimeout(()=>{delete $("#writeGo").dataset.sure;$("#writeGo").textContent="Write the article"},4000);return}
+  delete $("#writeGo").dataset.sure;$("#writeGo").textContent="Write the article";
+  $("#draftWrap").hidden=false;
+  aiStream({go:"#writeGo",stop:"#writeStop",status:"#writeStatus",prompt:writePrompt(),busy:"Planning the draft… this takes a minute or two",
+    onText:({text},st)=>{st.innerHTML=`<span class="pulse"></span>Writing… ${wc(text).toLocaleString()} words`;$("#draftOut").innerHTML=mdArticle(text)},
+    done:({text,truncated},st)=>{setDraft(text,false);if(truncated)st.textContent="The draft was cut short. Try a shorter length.";toast("Draft ready. Now check it.");$("#checkBlock").scrollIntoView({behavior:"smooth",block:"start"})}});
+};
+$("#checkGo").onclick=()=>aiStream({go:"#checkGo",stop:"#checkStop",status:"#checkStatus",prompt:checkPrompt(),json:true,busy:"Editor is reading your draft…",
+  onText:(x,st)=>{st.innerHTML=`<span class="pulse"></span>Writing the report…`},
+  done:(r,st)=>{if(!r||typeof r!=="object"||!("score" in r)){st.className="status err";st.textContent=errCopy("invalid_json");return}D().check=r;save();renderCheck()}});
+$("#reviseGo").onclick=()=>aiStream({go:"#reviseGo",stop:"#reviseStop",status:"#reviseStatus",prompt:revisePrompt(),busy:"Applying the fixes…",
+  onText:({text},st)=>{st.innerHTML=`<span class="pulse"></span>Rewriting… ${wc(text).toLocaleString()} words`},
+  done:({text},st)=>{setDraft(text,true);toast("Fixes applied. Check it again to see the new score.");$("#draftWrap").scrollIntoView({behavior:"smooth",block:"start"})}});
+
+$("#draftCopy").onclick=()=>copy(D().draft||"");
+$("#draftEditBtn").onclick=()=>{editingDraft=!editingDraft;const ta=$("#f_draft");ta.hidden=!editingDraft;$("#draftOut").hidden=editingDraft;$("#draftEditBtn").textContent=editingDraft?"Done":"Edit text";if(editingDraft){ta.value=D().draft||"";ta.focus()}else renderDraft()};
+$("#draftUndo").onclick=()=>{const d=D();if(!d.draftPrev)return;d.draft=d.draftPrev;delete d.draftPrev;d.check=null;save();renderDraft();renderCheck();toast("Restored the previous draft")};
+$("#draftToEdit").onclick=()=>{D().e_text=D().draft||"";save();$("#f_e_text").value=D().e_text;refresh();location.hash="edit";show("edit")};
+
+// No-key copy/paste for each step
+const MANUAL={
+  write:{prompt:()=>writePrompt(),load:t=>{if(wc(t)<80)return "That looks too short to be the full article.";setDraft(t.replace(/^```(?:markdown|md)?\s*|```\s*$/g,""),false)}},
+  check:{prompt:()=>checkPrompt()+"\n\nOutput the JSON inside a single ```json code block, with nothing else.",load:t=>{const r=parseLoose(t);if(!r||!("score" in r))return "That doesn't look like the full check. Copy Claude's whole reply.";D().check=r;save();renderCheck()}},
+  revise:{prompt:()=>revisePrompt(),load:t=>{if(wc(t)<80)return "That looks too short to be the full article.";setDraft(t.replace(/^```(?:markdown|md)?\s*|```\s*$/g,""),true)}}
+};
+document.addEventListener("click",e=>{
+  const c=e.target.closest("[data-mcopy]");
+  if(c){const m=MANUAL[c.dataset.mcopy];if(m)copyPrompt(m.prompt(),"Prompt");return}
+  const l=e.target.closest("[data-mload]");
+  if(l){const id=l.dataset.mload,m=MANUAL[id],ta=$("#"+id+"Paste"),st=$("#"+id+"PasteStatus");const err=m.load(ta.value.trim());if(err){st.className="status err";st.textContent=err}else{st.textContent="";ta.value="";toast("Loaded")}}
+});
 $("#archGo").onclick=()=>runArch(false);
 $("#archStop").onclick=()=>archCtl&&archCtl.abort();
 $("#coachGo").onclick=runCoach;
 $("#coachStop").onclick=()=>coachCtl&&coachCtl.abort();
 document.addEventListener("click",e=>{const b=e.target.closest("[data-fmt]");if(!b)return;D().a_fmt=b.dataset.fmt;save();renderFmt()});
-window.renderArch=renderArch;
+window.renderArch=renderArch;window.renderDraft=renderDraft;
 
 (async()=>{try{sampleFn=window.claude&&window.claude.use?await window.claude.use("sample"):null}catch(e){sampleFn=null}if(!sampleFn)hideAI()})();
 

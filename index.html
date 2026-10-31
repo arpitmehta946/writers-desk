@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f5f6f2" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111419" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Plan, research and edit articles like a top writer, with an AI Article Architect and writing coach.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Writer's Desk">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Writer's Desk</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: single narrow column of "worksheet" sections, sticky article bar on top, fixed tab bar at the bottom for thumbs */
+:root{
+  --paper:#f5f6f2; --surface:#ffffff; --ink:#1b2130; --muted:#5b6372; --line:#dcdfd8;
+  --accent:#2845c4; --accent-soft:#e6eafb; --mark:#f5e37c; --ok:#2c7548; --warn:#a9521a;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Newsreader",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#111419; --surface:#191d25; --ink:#e7e9ee; --muted:#9ba3b0; --line:#2b313c;
+  --accent:#8fa3ff; --accent-soft:#232a45; --mark:#6a5c14; --ok:#72cf98; --warn:#f0a36a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#111419; --surface:#191d25; --ink:#e7e9ee; --muted:#9ba3b0; --line:#2b313c;
+  --accent:#8fa3ff; --accent-soft:#232a45; --mark:#6a5c14; --ok:#72cf98; --warn:#f0a36a; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.55}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--paper)}
+.wrap{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 120px}
+
+header.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--paper);border-bottom:1px solid var(--line)}
+.bar-in{max-width:680px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px;display:flex;gap:8px;align-items:center}
+.brand{font-family:var(--display);font-weight:700;font-size:15px;letter-spacing:.01em;white-space:nowrap}
+.brand b{color:var(--accent)}
+select,input,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px}
+select{font-family:var(--display);font-size:14px;padding:7px 8px;min-width:0;flex:1}
+.iconbtn{font-family:var(--display);font-size:14px;font-weight:500;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:7px 10px;cursor:pointer;white-space:nowrap}
+.iconbtn:hover{border-color:var(--accent)}
+
+h1{font-family:var(--display);font-weight:700;font-size:clamp(28px,7vw,38px);line-height:1.08;letter-spacing:-.015em;margin:28px 0 6px;text-wrap:balance}
+h2{font-family:var(--display);font-weight:700;font-size:20px;margin:0;text-wrap:balance}
+.lede{color:var(--muted);margin:0 0 20px;max-width:60ch}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+
+.sheet{display:flex;flex-direction:column;gap:22px}
+.block{display:flex;flex-direction:column;gap:12px;padding-top:18px;border-top:1px solid var(--line)}
+.block .help{color:var(--muted);font-size:15px;margin:0}
+
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-family:var(--display);font-weight:500;font-size:15px;display:flex;gap:10px;align-items:baseline}
+.field label .n{font-family:var(--mono);font-size:12px;color:var(--accent);min-width:1.4em}
+textarea,input[type=text],input[type=date]{width:100%;padding:10px 12px;font-size:16px;line-height:1.45}
+textarea{min-height:64px;resize:vertical}
+textarea:focus,input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:transparent}
+::placeholder{color:var(--muted);opacity:.75;font-style:italic}
+
+.progress{display:flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.track{flex:1;height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.track i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+
+.check{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--line);cursor:pointer}
+.check:last-child{border-bottom:0}
+.check input{width:22px;height:22px;margin:2px 0 0;accent-color:var(--accent);flex:none}
+.check div{min-width:0}
+.check strong{font-family:var(--display);font-weight:500;display:block;font-size:16px}
+.check span{color:var(--muted);font-size:15px}
+.check input:checked + div strong{text-decoration:line-through;text-decoration-color:var(--accent);text-decoration-thickness:2px}
+
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row > *{min-width:0}
+.btn{font-family:var(--display);font-weight:500;font-size:15px;border:0;background:var(--accent);color:var(--paper);padding:10px 16px;border-radius:8px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn:focus-visible,.iconbtn:focus-visible,.chip:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--paper)}
+
+.qgroup h3{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:8px 0 4px;font-weight:500}
+.item{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
+.item p{margin:0;flex:1;min-width:0;overflow-wrap:anywhere}
+.item small{display:block;color:var(--muted);font-size:14px}
+.x{border:0;background:none;color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:2px 6px}
+.x:hover{color:var(--warn)}
+.empty{color:var(--muted);font-style:italic;font-size:15px;margin:0}
+
+.verdict{border-left:4px solid var(--muted);padding:10px 14px;background:var(--surface);border-radius:0 8px 8px 0}
+.verdict.go{border-color:var(--ok)} .verdict.go strong{color:var(--ok)}
+.verdict.stop{border-color:var(--warn)} .verdict.stop strong{color:var(--warn)}
+.verdict strong{font-family:var(--display)}
+.verdict p{margin:4px 0 0;font-size:15px;color:var(--muted)}
+
+.tabs3{display:flex;gap:6px;flex-wrap:wrap}
+.reader-card{display:flex;flex-direction:column;gap:12px}
+
+.example{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.example .lab{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase}
+.example .lab.weak{color:var(--warn)} .example .lab.good{color:var(--ok)}
+.example q{font-style:italic;quotes:"“" "”"}
+.example p{margin:0;font-size:15px;color:var(--muted)}
+
+.flow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-family:var(--display);font-weight:700}
+.flow span{background:var(--accent-soft);color:var(--accent);padding:4px 10px;border-radius:6px}
+.flow em{color:var(--muted);font-style:normal}
+
+.stats{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:13px;color:var(--muted)}
+.stats b{color:var(--ink);font-variant-numeric:tabular-nums;font-size:16px}
+.marked{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere}
+mark{background:var(--mark);color:var(--ink);border-radius:2px;padding:0 1px}
+.flags{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.flags li{font-size:15px}
+.flags code{font-family:var(--mono);font-size:13px;background:var(--mark);padding:0 4px;border-radius:3px}
+
+nav.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.tabbar-in{max-width:680px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr)}
+.tab{border:0;background:none;color:var(--muted);font-family:var(--display);font-size:12px;font-weight:500;padding:10px 2px 12px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;position:relative}
+.tab .k{font-family:var(--mono);font-size:10px;opacity:.8}
+.tab[aria-current="page"]{color:var(--accent)}
+.tab[aria-current="page"]::before{content:"";position:absolute;top:0;left:22%;right:22%;height:3px;background:var(--accent);border-radius:0 0 3px 3px}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--paper);font-family:var(--display);font-size:14px;padding:9px 16px;border-radius:999px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:20}
+.toast.on{opacity:1}
+.confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:15px;padding:10px 0 0}
+.copybox{width:100%;min-height:160px;font-family:var(--mono);font-size:13px}
+.tabbar-in{grid-template-columns:repeat(7,1fr)}
+.tab{font-size:11px}
+.aibar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.status{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.status.err{color:var(--warn)}
+.pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:8px;animation:pulse 1.2s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.note{background:var(--accent-soft);border-radius:10px;padding:12px 14px;font-size:15px}
+.result{display:flex;flex-direction:column;gap:22px;margin-top:8px}
+.rsec{display:flex;flex-direction:column;gap:10px;padding-top:16px;border-top:1px solid var(--line)}
+.rsec > p,.rsec li{margin:0;font-size:16px}
+.rsec ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:15px}
+.kv dt{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.kv dd{margin:0;min-width:0}
+.angle{border-left:4px solid var(--accent);padding:8px 14px;font-size:17px}
+.sec{display:grid;grid-template-columns:2.2em 1fr;gap:4px 10px;padding:14px 0;border-bottom:1px dashed var(--line)}
+.sec:last-child{border-bottom:0}
+.sec .num{font-family:var(--display);font-weight:700;font-size:22px;color:var(--accent);line-height:1.1}
+.sec > div{min-width:0}
+.sec h4{font-family:var(--display);font-weight:700;font-size:17px;margin:0 0 6px;text-wrap:balance}
+.stage{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid currentColor;margin-left:6px;vertical-align:2px;font-weight:500}
+.stage.know{color:var(--accent)} .stage.decide{color:var(--warn)} .stage.act{color:var(--ok)}
+.sec .job{margin:0 0 6px;font-size:15px}
+.sec .why{margin:0 0 6px;font-size:15px;color:var(--muted)}
+.sec .why b{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink);font-weight:500}
+.sec ul{margin:0;padding-left:18px;font-size:15px}
+.sec .subs{font-size:14px;color:var(--muted);margin-top:4px}
+.md h3{font-family:var(--display);font-size:17px;margin:14px 0 4px}
+.md p{margin:0 0 8px}
+.md ul{margin:0 0 8px;padding-left:20px}
+.md blockquote{margin:0 0 8px;border-left:3px solid var(--line);padding-left:10px;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}.pulse{animation:none}}
+</style>
+<style>
+html{padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
+body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+[hidden]{display:none!important}
+.install{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--accent-soft);color:var(--ink);border-radius:10px;padding:10px 12px;margin-top:16px;font-size:15px}
+.install .btn{padding:8px 14px}
+.apipanel{display:flex;flex-direction:column;gap:10px;width:100%;padding:12px 0 4px}
+.apipanel h3{font-family:var(--display);font-size:16px;margin:0}
+.apipanel p{margin:0;font-size:14px;color:var(--muted)}
+.apipanel select{flex:1 1 auto;width:100%}
+header.bar{max-height:75vh;overflow-y:auto}
+</style>
+</head>
+<body>
+
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand">Writer's <b>Desk</b></div>
+    <select id="projSel" aria-label="Current article"></select>
+    <button class="iconbtn" id="newBtn" type="button">+ New</button>
+    <button class="iconbtn" id="moreBtn" type="button" aria-expanded="false">⋯</button>
+  </div>
+  <div class="bar-in" id="moreMenu" hidden>
+    <div class="row" style="width:100%">
+      <input type="text" id="titleIn" placeholder="Article title" aria-label="Article title" style="flex:1 1 200px">
+      <button class="iconbtn" id="exportBtn" type="button">Copy everything</button>
+      <button class="iconbtn" id="exampleBtn" type="button">Load example</button>
+      <button class="iconbtn" id="apiBtn" type="button">Claude API</button>
+      <button class="iconbtn" id="backupBtn" type="button">Back up file</button>
+      <label class="iconbtn" for="restoreIn" style="cursor:pointer">Restore file</label>
+      <input type="file" id="restoreIn" accept="application/json,.json" hidden>
+      <button class="iconbtn" id="delBtn" type="button">Delete</button>
+    </div>
+  </div>
+  <div class="bar-in" id="apiPanel" hidden>
+    <div class="apipanel">
+      <h3>Claude API connection</h3>
+      <p>Powers the Article Architect and Expert Coach. Create a key at console.anthropic.com → API Keys. Your key is stored only on this device and sent only to Anthropic. Each run is billed to your API account.</p>
+      <div class="row"><input type="password" id="apiKeyIn" placeholder="sk-ant-..." autocomplete="off" spellcheck="false" style="flex:1 1 200px" aria-label="Claude API key"><button class="iconbtn" type="button" id="apiShow">Show</button></div>
+      <select id="apiModelIn" aria-label="Model">
+        <option value="claude-sonnet-5-5">Claude Sonnet 5.5 · recommended</option>
+        <option value="claude-opus-5-5">Claude Opus 5.5 · deepest, costs more</option>
+        <option value="claude-haiku-5-5">Claude Haiku 5.5 · fastest, cheapest</option>
+      </select>
+      <div class="row"><button class="btn" type="button" id="apiSave">Save and test</button><button class="btn ghost" type="button" id="apiRemove">Remove key</button></div>
+      <span class="status" id="apiStatus"></span>
+    </div>
+  </div>
+  <div class="bar-in" id="delConfirm" hidden>
+    <div class="confirm">Delete this article's notes? This can't be undone.
+      <button class="btn" id="delYes" type="button" style="background:var(--warn)">Delete</button>
+      <button class="btn ghost" id="delNo" type="button">Keep</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+<div class="install" id="installBar" hidden><span id="installMsg">Install Writer's Desk on your phone for offline use.</span><button class="btn" type="button" id="installBtn">Install</button><button class="x" type="button" id="installX" aria-label="Dismiss">×</button></div>
+
+<!-- ARCHITECT -->
+<section data-view="architect">
+  <div class="eyebrow">Start here · Ask the expert</div>
+  <h1>Article Architect</h1>
+  <p class="lede">Type a topic. You get the structure a top writer would use: who is searching, what they need first, the section-by-section flow, and why each part sits where it does.</p>
+  <div class="sheet">
+    <div class="field"><label for="f_a_topic">Topic or target keyword</label><input type="text" id="f_a_topic" data-k="a_topic" placeholder="e.g. how to cash a cheque without a bank account"></div>
+    <div class="field"><label for="f_a_ctx">What you know (optional)</label><textarea id="f_a_ctx" data-k="a_ctx" placeholder="Brand, location, audience, goal. e.g. For Cheque Express, Toronto. Readers are walk-in customers, many without a bank account."></textarea></div>
+    <div class="field"><label>Article type</label><div class="chips" id="fmtChips" role="group" aria-label="Article type"></div></div>
+    <div class="aibar">
+      <button class="btn" type="button" id="archGo">Build the expert structure</button>
+      <button class="btn ghost" type="button" id="archStop" hidden>Stop</button>
+      <span class="status" id="archStatus"></span>
+    </div>
+    <div class="note" id="aiOff" hidden>Connect your Claude API key to use the Architect and Coach. <button class="btn" type="button" id="aiSetup" style="margin-top:8px">Connect Claude API</button></div>
+    <div class="result" id="archOut"></div>
+  </div>
+</section>
+
+<!-- BRIEF -->
+<section data-view="brief" hidden>
+  <div class="eyebrow">Step 1 · Before you research</div>
+  <h1>Content brief</h1>
+  <p class="lede">Fill this in before drafting. It stops you writing 1,500 words before realising you misread the reader's question. Blanks are fine while you're still working it out.</p>
+  <div class="progress"><span id="briefCount">0 / 9</span><div class="track"><i id="briefBar"></i></div></div>
+  <div class="sheet" id="briefFields" style="margin-top:18px"></div>
+  <div class="row" style="margin-top:20px"><button class="btn" type="button" data-copy="brief">Copy brief</button></div>
+</section>
+
+<!-- RESEARCH -->
+<section data-view="research" hidden>
+  <div class="eyebrow">Step 2 · Learn the subject</div>
+  <h1>Research</h1>
+  <p class="lede">You don't need to be an expert. You need to know enough to write a complete, accurate article for this reader.</p>
+  <div class="sheet">
+    <div class="block">
+      <h2>The five-step method</h2>
+      <div id="stepChecks"></div>
+    </div>
+
+    <div class="block">
+      <h2>Reader questions</h2>
+      <p class="help">Collect from autocomplete, People Also Ask, reviews, Reddit, forums and support FAQs. Tag each one.</p>
+      <textarea id="qText" placeholder="e.g. Can I cash a cheque without a bank account?" style="min-height:52px"></textarea>
+      <div class="chips" id="qCats" role="group" aria-label="Question category"></div>
+      <div class="row"><button class="btn" type="button" id="qAdd">Add question</button></div>
+      <div id="qList"></div>
+    </div>
+
+    <div class="block">
+      <h2>Source log</h2>
+      <p class="help">Primary sources first: provider pages for fees, regulators for rules. If two sources disagree, investigate.</p>
+      <input type="text" id="sSrc" placeholder="Source (name or URL)">
+      <input type="text" id="sClaim" placeholder="Exact claim it supports">
+      <input type="text" id="sLimit" placeholder="Limitations (region, date, sample…)">
+      <div class="row"><input type="date" id="sDate" aria-label="Date checked" style="flex:1"><button class="btn" type="button" id="sAdd">Log source</button></div>
+      <div id="sList"></div>
+    </div>
+
+    <div class="block">
+      <h2>Competitor gaps</h2>
+      <div class="field"><label for="f_comp_cover">What do ranking pages cover?</label><textarea id="f_comp_cover" data-k="comp_cover"></textarea></div>
+      <div class="field"><label for="f_comp_gap">Which reader questions do they leave unresolved?</label><textarea id="f_comp_gap" data-k="comp_gap" placeholder="This is your missing value."></textarea></div>
+    </div>
+
+    <div class="block">
+      <h2>Knowledge map</h2>
+      <p class="help">Your outline should grow from these three groups, not from competitor headings.</p>
+      <div class="field"><label for="f_km_know">Must know to understand the topic</label><textarea id="f_km_know" data-k="km_know"></textarea></div>
+      <div class="field"><label for="f_km_decide">Need to compare options or decide</label><textarea id="f_km_decide" data-k="km_decide"></textarea></div>
+      <div class="field"><label for="f_km_act">Need to act safely and confidently</label><textarea id="f_km_act" data-k="km_act"></textarea></div>
+    </div>
+
+    <div class="block">
+      <h2>Have I researched enough?</h2>
+      <div id="enoughChecks"></div>
+      <div class="verdict" id="verdict"></div>
+    </div>
+  </div>
+</section>
+
+<!-- READER -->
+<section data-view="reader" hidden>
+  <div class="eyebrow">Step 3 · Audience psychology</div>
+  <h1>Reader profiles</h1>
+  <p class="lede">Don't ask what to include. Ask what the reader is trying to achieve, what might stop them, and what will move them forward. Treat assumptions as hypotheses until research backs them.</p>
+  <div class="tabs3" id="readerTabs" role="group" aria-label="Reader"></div>
+  <div class="reader-card" id="readerCard" style="margin-top:16px"></div>
+  <div class="block" style="margin-top:24px">
+    <h2>Same search, different needs</h2>
+    <div class="example"><span class="lab good">Reader A · In a hurry</span><q>I need my money today. Where should I go?</q><p>Lead with speed, eligibility, opening hours, whether this location can cash it.</p></div>
+    <div class="example"><span class="lab good">Reader B · Cost-conscious</span><q>How much will I actually receive?</q><p>Lead with fees, comparisons and low-cost alternatives.</p></div>
+    <div class="example"><span class="lab good">Reader C · Large cheque</span><q>Will they accept it, or will I waste a trip?</q><p>Lead with amount limits, verification, cheque types and calling ahead.</p></div>
+  </div>
+</section>
+
+<!-- HOOK -->
+<section data-view="hook" hidden>
+  <div class="eyebrow">Step 4 · The opening</div>
+  <h1>Hook builder</h1>
+  <p class="lede">A good hook earns attention. It doesn't hold the answer hostage.</p>
+  <div class="flow"><span>Recognition</span><em>→</em><span>Relevance</span><em>→</em><span>Reward</span></div>
+  <div class="sheet" style="margin-top:18px">
+    <div class="field"><label for="f_h_rec"><span class="n">R1</span>Recognition: the problem they'll see as theirs</label><textarea id="f_h_rec" data-k="h_rec" placeholder="Need to cash a cheque today?"></textarea></div>
+    <div class="field"><label for="f_h_rel"><span class="n">R2</span>Relevance: why this matters to their situation</label><textarea id="f_h_rel" data-k="h_rel" placeholder="The best place depends on your cheque, the fee you'll accept and whether you bank."></textarea></div>
+    <div class="field"><label for="f_h_rew"><span class="n">R3</span>Reward: the useful thing you give straight away</label><textarea id="f_h_rew" data-k="h_rew" placeholder="Compare your bank, the issuing bank and cheque-cashing services first."></textarea></div>
+    <div class="field"><label for="f_h_draft">Your opening, written out</label><textarea id="f_h_draft" data-k="h_draft" style="min-height:110px"></textarea></div>
+
+    <div class="block">
+      <h2>Check it against the five techniques</h2>
+      <div id="hookChecks"></div>
+    </div>
+
+    <div class="block">
+      <h2>Weak → strong</h2>
+      <div class="example"><span class="lab weak">Weak</span><q>Check cashing is a financial service that allows individuals to convert checks into cash.</q><p>Correct, but gives no reason to keep reading.</p></div>
+      <div class="example"><span class="lab good">Better</span><q>Need to cash a check today? The best place to go depends on the check you have, the fee you're willing to pay, and whether you have a bank account.</q><p>Names the situation and the decision.</p></div>
+      <div class="example"><span class="lab good">Strongest</span><q>Before paying a check-cashing fee, compare your bank, the bank that issued the check, and dedicated check-cashing services. The lowest-cost option and the most convenient option may not be the same.</q><p>Gives value before asking for more time.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- EDIT -->
+<section data-view="edit" hidden>
+  <div class="eyebrow">Step 5 · Edit harder than you draft</div>
+  <h1>Edit desk</h1>
+  <p class="lede">Paste a paragraph or your whole draft. Filler gets highlighted instantly, and the coach tells you what a top editor would change and why.</p>
+  <div class="sheet">
+    <div class="field"><label for="f_e_text">Your writing</label><textarea id="f_e_text" data-k="e_text" style="min-height:160px"></textarea></div>
+    <div class="stats" id="eStats"></div>
+    <div class="marked" id="eMarked" hidden></div>
+    <ul class="flags" id="eFlags"></ul>
+
+    <div class="block">
+      <h2>Expert coach</h2>
+      <p class="help">Reviews your writing against the framework: hook, reader focus, paragraph jobs, vagueness. Then it shows rewrites and explains each one. It uses your brief and reader profile if you've filled them in.</p>
+      <div class="aibar">
+        <button class="btn" type="button" id="coachGo">Coach my writing</button>
+        <button class="btn ghost" type="button" id="coachStop" hidden>Stop</button>
+        <span class="status" id="coachStatus"></span>
+      </div>
+      <div class="md" id="coachOut"></div>
+    </div>
+
+    <div class="block">
+      <h2>Six habits</h2>
+      <div id="habitChecks"></div>
+    </div>
+
+    <div class="block">
+      <h2>Before and after</h2>
+      <div class="example"><span class="lab weak">Before · 31 words</span><q>Choosing the right check-cashing company is very important because different companies provide different services and charge different fees, which is why customers should carefully evaluate their options before making a decision.</q></div>
+      <div class="example"><span class="lab good">After · 24 words</span><q>Compare fees, check limits, and accepted check types before choosing a provider. A company that accepts your check may not offer the lowest fee.</q><p>Shorter, and it tells the reader what to do and why.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICE -->
+<section data-view="voice" hidden>
+  <div class="eyebrow">Ghostwriting & brand content</div>
+  <h1>Voice guide</h1>
+  <p class="lede">When you write as a founder, expert or brand, learn how they think before polishing the prose.</p>
+  <div class="sheet">
+    <div class="field"><label for="f_v_who">Whose voice is this?</label><input type="text" id="f_v_who" data-k="v_who" placeholder="e.g. Cheque Express, or the founder"></div>
+    <div class="block">
+      <h2>Process</h2>
+      <div id="ghostChecks"></div>
+    </div>
+    <div class="block">
+      <h2>Voice notes</h2>
+      <div id="voiceFields" class="sheet"></div>
+    </div>
+    <div class="row"><button class="btn" type="button" data-copy="voice">Copy voice guide</button></div>
+  </div>
+</section>
+
+<div class="block" id="copyFallback" hidden style="margin-top:20px">
+  <p class="help">Copying is blocked here. The text is selected below, so copy it manually.</p>
+  <textarea class="copybox" id="copyBox" readonly></textarea>
+</div>
+</main>
+
+<nav class="tabbar" aria-label="Sections">
+  <div class="tabbar-in" id="tabbar"></div>
+</nav>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+// Claude API bridge: gives the page the same "sample" interface it uses inside Claude.
+const WD_API={k:"wd-api-key",m:"wd-api-model"};
+function apiKey(){try{return localStorage.getItem(WD_API.k)||""}catch(e){return ""}}
+function apiModel(){try{return localStorage.getItem(WD_API.m)||"claude-sonnet-5-5"}catch(e){return "claude-sonnet-5-5"}}
+async function apiSample(input,opts={}){
+  const key=apiKey(); if(!key) throw {code:"bad_key",message:"No API key saved"};
+  if(navigator.onLine===false) throw {code:"offline"};
+  const messages=typeof input==="string"?[{role:"user",content:input}]:input;
+  let res;
+  try{
+    res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal:opts.signal,
+      headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
+      body:JSON.stringify({model:opts._model||apiModel(),max_tokens:opts._max||8000,stream:true,messages})});
+  }catch(e){throw {code:e&&e.name==="AbortError"?"cancelled":(navigator.onLine===false?"offline":"upstream_error"),message:String(e)}}
+  if(!res.ok){
+    let body="";try{body=await res.text()}catch(e){}
+    const s=res.status;
+    const code=(s===401||s===403)?"bad_key":/credit|billing/i.test(body)?"no_credit":s===429?"rate_limited":(s===529||s===503)?"overloaded":"upstream_error";
+    throw {code,message:body};
+  }
+  const reader=res.body.getReader(),dec=new TextDecoder();let buf="",text="",stop=null;
+  try{
+    for(;;){
+      const {done,value}=await reader.read(); if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      let i;
+      while((i=buf.indexOf("\n\n"))>=0){
+        const chunk=buf.slice(0,i);buf=buf.slice(i+2);
+        const dl=chunk.split("\n").find(l=>l.startsWith("data:")); if(!dl)continue;
+        let ev;try{ev=JSON.parse(dl.slice(5))}catch(e){continue}
+        if(ev.type==="content_block_delta"&&ev.delta&&ev.delta.type==="text_delta"){text+=ev.delta.text;if(opts.onText)try{opts.onText({text,delta:ev.delta.text})}catch(e){}}
+        else if(ev.type==="message_delta"&&ev.delta&&ev.delta.stop_reason)stop=ev.delta.stop_reason;
+        else if(ev.type==="error")throw {code:ev.error&&ev.error.type==="overloaded_error"?"overloaded":"upstream_error",message:JSON.stringify(ev.error),text};
+      }
+    }
+  }catch(e){
+    if(e&&e.code)throw e;
+    throw {code:opts.signal&&opts.signal.aborted?"cancelled":"upstream_error",text};
+  }
+  if(stop==="refusal")throw {code:"refused"};
+  if(!text.trim())throw {code:"empty_completion"};
+  return {text,truncated:stop==="max_tokens"};
+}
+apiSample.json=async(input,opts={})=>{
+  const {text,truncated}=await apiSample(input,opts);
+  if(truncated)throw {code:"invalid_json",text};
+  try{return JSON.parse(text)}catch(e){}
+  const f=text.match(/```(?:json)?\s*([\s\S]*?)```/);if(f){try{return JSON.parse(f[1])}catch(e){}}
+  const a=text.search(/[\[{]/),b=Math.max(text.lastIndexOf("}"),text.lastIndexOf("]"));
+  if(a>=0&&b>a){try{return JSON.parse(text.slice(a,b+1))}catch(e){}}
+  throw {code:"invalid_json",text};
+};
+if(!window.claude)window.claude={use:async n=>(n==="sample"&&apiKey())?apiSample:null};
+</script>
+<script>
+const TABS=[["architect","Architect","AI"],["brief","Brief","01"],["research","Research","02"],["reader","Reader","03"],["hook","Hook","04"],["edit","Edit","05"],["voice","Voice","06"]];
+const BRIEF=[
+ ["topic","What is the topic?","Check cashing near me"],
+ ["goal","What is the business or editorial goal?","Bring in walk-in customers; rank for local check-cashing searches"],
+ ["reader","Who is the primary reader?","Someone with a cheque who needs cash today"],
+ ["problem","What problem brought them to this article?",""],
+ ["intent","What question or search intent must it satisfy?",""],
+ ["understand","What should readers understand by the end?",""],
+ ["evidence","What evidence or expertise is needed?","Verified fees, ID requirements, cheque limits"],
+ ["tone","What tone suits the reader and topic?","Reassuring, clear, practical"],
+ ["next","What should the reader do next, if anything?","Call ahead or visit with ID"]];
+const STEPS=[
+ ["Understand the subject before the keyword","How it works, who provides it, how they earn, what can go wrong."],
+ ["Study the reader's real questions","Collect them below and tag each one."],
+ ["Use primary sources first","Log source, date checked, claim and limits."],
+ ["Find the missing value in competing articles","Not rewriting them. Finding what readers still need."],
+ ["Build a knowledge map before outlining","Know → decide → act."]];
+const CATS=["cost","eligibility","process","risk","comparison","next steps"];
+const ENOUGH=[
+ "I can explain it to a beginner without reading my notes aloud",
+ "I can answer the main reader question directly",
+ "I can explain the important exceptions and limitations",
+ "I know which claims are verified and which are uncertain",
+ "I can name something useful competitors missed"];
+const RFIELDS=[
+ ["situation","Situation","What is happening in their life or work?"],
+ ["goal","Goal","What do they want to accomplish?"],
+ ["obstacle","Obstacle","What makes that difficult?"],
+ ["concern","Concern","What are they worried about?"],
+ ["gap","Knowledge gap","What don't they understand yet?"],
+ ["decision","Decision","What must they choose?"],
+ ["success","Success","What would a satisfying answer let them do?"]];
+const HOOKS=[
+ ["Starts with the reader's situation","Not with how important the industry has become."],
+ ["Introduces a real tension","Only if it's genuine, never invented."],
+ ["Challenges a reasonable misconception","A useful correction creates curiosity."],
+ ["Uses a concrete detail","A verified fee or real comparison beats 'save time and money'."],
+ ["Delivers value quickly","No five paragraphs of suspense before the answer."]];
+const HABITS=[
+ ["Sounds like a knowledgeable person explaining","Technical terms only when they add precision."],
+ ["Every paragraph does a job","Answers, explains, supports, illustrates, or helps decide."],
+ ["Explains implications, not just facts","Why does the difference matter to the reader?"],
+ ["Moves from simple to complex","Basic idea first, exceptions later."],
+ ["Uses examples to make ideas concrete","A number, a scenario, a short comparison."],
+ ["Cut filler, repetition and hype","Replace vague statements with specific ones."]];
+const GHOST=[
+ ["Interview the subject","How they approach it, mistakes they see, what others misunderstand."],
+ ["Collect voice samples","Articles, emails, talks, approved brand content."],
+ ["Identify their voice","Fill in the notes below."],
+ ["Separate expertise from assumptions","Which claims are lived experience, which need research?"],
+ ["Build the argument before polishing","What it says, why it matters, what supports it."],
+ ["Review for authenticity","Would they genuinely say this?"]];
+const VFIELDS=[
+ ["v_vocab","Vocabulary","Words they use, words they never use"],
+ ["v_len","Sentence length","Short and punchy? Long and careful?"],
+ ["v_form","Formality",""],
+ ["v_humor","Humour",""],
+ ["v_examples","Preferred examples",""],
+ ["v_opinions","How they express opinions","Direct, hedged, data-first…"],
+ ["v_adj","Voice in three or four words","Reassuring, clear, community-oriented, practical"]];
+const FILLER=[
+ [/\bvery\b/gi,"Usually adds nothing. Use a stronger, specific word."],
+ [/\breally\b/gi,"Filler intensifier."],
+ [/\bincreasingly important\b|\bmodern world\b|\btoday'?s (?:fast-paced )?world\b|\bin this day and age\b/gi,"Generic opener. Start with the reader's situation."],
+ [/\bit is important to (?:note|remember)\b|\bit'?s worth noting\b|\bneedless to say\b/gi,"Just state the point."],
+ [/\bcarefully evaluate\b|\bmake an informed decision\b|\bbefore making a decision\b/gi,"Vague. Say exactly what to compare."],
+ [/\bvarious\b|\bnumerous\b|\ba (?:wide )?(?:range|variety) of\b/gi,"Name the actual things."],
+ [/\bin order to\b/gi,"Usually just 'to'."],
+ [/\bdue to the fact that\b|\bwhich is why\b/gi,"Wordy connector. Try 'because' or a new sentence."],
+ [/\bseamless(?:ly)?\b|\bcutting-edge\b|\bgame-?changer\b|\bunlock\b|\bleverage\b|\brobust\b/gi,"Hype word. Replace with a concrete benefit."],
+ [/\bsave (?:you )?time and money\b/gi,"Broad claim. Give a verified number."],
+ [/\b(?:basically|essentially|actually|simply)\b/gi,"Often removable."]];
+
+const KEY="writers-desk-v1";
+let S={projects:{},current:null};
+function load(){try{const r=localStorage.getItem(KEY);if(r)S=JSON.parse(r)}catch(e){}if(!S.current||!S.projects[S.current])newProject("Untitled article",true)}
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},250)}
+function P(){return S.projects[S.current]}
+function D(){return P().data}
+function newProject(title,silent){const id="p"+Date.now().toString(36);S.projects[id]={title,updated:Date.now(),data:{questions:[],sources:[]}};S.current=id;save();if(!silent){renderProjects();fillAll()}}
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function field(k,label,ph,num,tag){return `<div class="field"><label for="f_${k}">${num?`<span class="n">${num}</span>`:""}${esc(label)}</label><${tag||"textarea"} id="f_${k}" data-k="${k}" ${tag?'type="text"':""} placeholder="${esc(ph||"")}">${tag?"":"</textarea>"}</div>`}
+function checks(id,list,prefix){$(id).innerHTML=list.map((c,i)=>`<label class="check"><input type="checkbox" data-k="${prefix}${i}" id="f_${prefix}${i}"><div><strong>${esc(c[0]||c)}</strong>${c[1]?`<span>${esc(c[1])}</span>`:""}</div></label>`).join("")}
+
+function build(){
+  $("#tabbar").innerHTML=TABS.map(t=>`<button class="tab" type="button" data-tab="${t[0]}"><span class="k">${t[2]}</span>${t[1]}</button>`).join("");
+  $("#briefFields").innerHTML=BRIEF.map((b,i)=>field("b_"+b[0],b[1],b[2],i+1)).join("");
+  checks("#stepChecks",STEPS,"st");
+  checks("#enoughChecks",ENOUGH.map(x=>[x]),"en");
+  checks("#hookChecks",HOOKS,"hk");
+  checks("#habitChecks",HABITS,"hb");
+  checks("#ghostChecks",GHOST,"gh");
+  $("#voiceFields").innerHTML=VFIELDS.map(v=>field(v[0],v[1],v[2])).join("");
+  $("#qCats").innerHTML=CATS.map((c,i)=>`<button type="button" class="chip" data-cat="${c}" aria-pressed="${i===0}">${c}</button>`).join("");
+  $("#readerTabs").innerHTML=[1,2,3].map(n=>`<button type="button" class="chip" data-reader="${n}" aria-pressed="${n===1}">Reader ${n}</button>`).join("");
+  renderReader(1);
+}
+function renderReader(n){
+  $("#readerCard").innerHTML=field(`r${n}_name`,"Who is this, in one line?",n===1?"The person in a hurry":n===2?"The cost-conscious customer":"The person with a large cheque",null,"input")+
+   RFIELDS.map(f=>field(`r${n}_${f[0]}`,f[1],f[2])).join("")+
+   field(`r${n}_first`,"So the article must lead with…","");
+  document.querySelectorAll("#readerCard [data-k]").forEach(el=>el.value=D()[el.dataset.k]||"");
+}
+
+function fillAll(){
+  const d=D();
+  document.querySelectorAll("[data-k]").forEach(el=>{const v=d[el.dataset.k];if(el.type==="checkbox")el.checked=!!v;else el.value=v||""});
+  $("#titleIn").value=P().title;
+  renderQ();renderS();refresh();
+  if(window.renderArch){renderArch(d.arch);renderFmt();$("#coachOut").innerHTML=d.coach?mdToHtml(d.coach):""}
+}
+function refresh(){
+  const d=D();
+  const n=BRIEF.filter(b=>(d["b_"+b[0]]||"").trim()).length;
+  $("#briefCount").textContent=`${n} / 9`;$("#briefBar").style.width=(n/9*100)+"%";
+  const yes=ENOUGH.filter((_,i)=>d["en"+i]).length, missing=ENOUGH.filter((_,i)=>!d["en"+i]);
+  const v=$("#verdict");
+  if(yes>=4){v.className="verdict go";v.innerHTML=`<strong>Start outlining.</strong><p>${yes} of 5 checked.${missing.length?" Still open: "+esc(missing[0].toLowerCase())+".":""}</p>`}
+  else if(yes===0){v.className="verdict";v.innerHTML=`<strong>Tick what's true.</strong><p>If several are still no, keep researching.</p>`}
+  else{v.className="verdict stop";v.innerHTML=`<strong>Keep researching.</strong><p>${yes} of 5 checked. Work on: ${missing.map(m=>esc(m.toLowerCase())).join("; ")}.</p>`}
+  scan();
+}
+function scan(){
+  const t=D().e_text||"";
+  if(!t.trim()){$("#eStats").innerHTML="";$("#eMarked").hidden=true;$("#eFlags").innerHTML="";return}
+  const words=(t.match(/\b[\w'’-]+\b/g)||[]).length, sents=Math.max(1,(t.match(/[.!?]+(\s|$)/g)||[]).length);
+  const hits=[];let html=esc(t);
+  FILLER.forEach(([re,tip])=>{const m=t.match(re);if(m){m.forEach(x=>hits.push([x,tip]));html=html.replace(new RegExp(re.source,re.flags),x=>`<mark>${x}</mark>`)}});
+  const avg=Math.round(words/sents);
+  $("#eStats").innerHTML=`<span><b>${words}</b> words</span><span><b>${sents}</b> sentences</span><span><b>${avg}</b> avg / sentence</span><span><b>${hits.length}</b> flags</span>`;
+  $("#eMarked").hidden=false;$("#eMarked").innerHTML=html;
+  const seen=new Set();
+  let li=hits.filter(h=>{const k=h[0].toLowerCase();if(seen.has(k))return false;seen.add(k);return true}).map(h=>`<li><code>${esc(h[0])}</code> ${esc(h[1])}</li>`);
+  if(avg>25)li.unshift(`<li><code>long sentences</code> Averaging ${avg} words. Split where a sentence carries two ideas.</li>`);
+  if(!li.length)li=[`<li>No filler patterns found. Now check every sentence does a job.</li>`];
+  $("#eFlags").innerHTML=li.join("");
+}
+
+let cat=CATS[0];
+function renderQ(){
+  const q=D().questions||[];
+  if(!q.length){$("#qList").innerHTML=`<p class="empty">No questions yet. Your first one will appear here, grouped by category.</p>`;return}
+  $("#qList").innerHTML=CATS.filter(c=>q.some(x=>x.cat===c)).map(c=>`<div class="qgroup"><h3>${c} · ${q.filter(x=>x.cat===c).length}</h3>${q.map((x,i)=>x.cat===c?`<div class="item"><p>${esc(x.q)}</p><button class="x" type="button" aria-label="Remove question" data-rmq="${i}">×</button></div>`:"").join("")}</div>`).join("");
+}
+function renderS(){
+  const s=D().sources||[];
+  if(!s.length){$("#sList").innerHTML=`<p class="empty">No sources logged yet.</p>`;return}
+  $("#sList").innerHTML=s.map((x,i)=>`<div class="item"><p>${esc(x.src)}<small>${esc(x.claim||"No claim noted")}${x.limit?" · Limits: "+esc(x.limit):""}${x.date?" · Checked "+esc(x.date):""}</small></p><button class="x" type="button" aria-label="Remove source" data-rms="${i}">×</button></div>`).join("");
+}
+function renderProjects(){
+  const ids=Object.keys(S.projects).sort((a,b)=>S.projects[b].updated-S.projects[a].updated);
+  $("#projSel").innerHTML=ids.map(id=>`<option value="${id}" ${id===S.current?"selected":""}>${esc(S.projects[id].title||"Untitled")}</option>`).join("");
+}
+
+function show(tab){
+  if(!TABS.some(t=>t[0]===tab))tab="architect";
+  document.querySelectorAll("[data-view]").forEach(s=>s.hidden=s.dataset.view!==tab);
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===tab?"page":"false"));
+  $("#copyFallback").hidden=true;
+  window.scrollTo(0,0);
+}
+
+function md(part){
+  const d=D(),L=[],v=k=>(d[k]||"").trim()||"—";
+  const brief=()=>{L.push("## Content brief");BRIEF.forEach((b,i)=>L.push(`${i+1}. **${b[1]}** ${v("b_"+b[0])}`))};
+  const voice=()=>{L.push(`## Voice guide: ${v("v_who")}`);VFIELDS.forEach(f=>L.push(`- **${f[1]}:** ${v(f[0])}`))};
+  L.push(`# ${P().title||"Untitled article"}`,"");
+  if(part==="brief"){brief();return L.join("\n")}
+  if(part==="voice"){voice();return L.join("\n")}
+  brief();L.push("","## Reader questions");CATS.forEach(c=>{const q=(d.questions||[]).filter(x=>x.cat===c);if(q.length){L.push(`### ${c}`);q.forEach(x=>L.push("- "+x.q))}});
+  L.push("","## Sources");(d.sources||[]).forEach(s=>L.push(`- ${s.src} — ${s.claim||""}${s.limit?" (limits: "+s.limit+")":""}${s.date?" [checked "+s.date+"]":""}`));
+  L.push("","## Competitor gaps",`- Cover: ${v("comp_cover")}`,`- Unresolved: ${v("comp_gap")}`);
+  L.push("","## Knowledge map",`- Know: ${v("km_know")}`,`- Decide: ${v("km_decide")}`,`- Act: ${v("km_act")}`);
+  [1,2,3].forEach(n=>{if(!RFIELDS.some(f=>d[`r${n}_${f[0]}`]))return;L.push("",`## Reader ${n}: ${v(`r${n}_name`)}`);RFIELDS.forEach(f=>L.push(`- **${f[1]}:** ${v(`r${n}_${f[0]}`)}`));L.push(`- **Lead with:** ${v(`r${n}_first`)}`)});
+  L.push("","## Hook",`- Recognition: ${v("h_rec")}`,`- Relevance: ${v("h_rel")}`,`- Reward: ${v("h_rew")}`,"",v("h_draft"));
+  L.push("");voice();
+  return L.join("\n");
+}
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");setTimeout(()=>t.classList.remove("on"),1600)}
+function copy(text){
+  const fb=()=>{$("#copyFallback").hidden=false;const b=$("#copyBox");b.value=text;b.focus();b.select();b.scrollIntoView({block:"center"})};
+  try{navigator.clipboard.writeText(text).then(()=>toast("Copied"),fb)}catch(e){fb()}
+}
+
+function loadExample(){
+  const d=D();
+  Object.assign(d,{
+   b_topic:"Where to cash a cheque today (example)",b_goal:"Bring walk-in customers to local branches",b_reader:"Someone holding a pay or government cheque who needs cash today",
+   b_problem:"Their bank is closed, slow, or they don't have one",b_intent:"Where can I cash this cheque now, and what will it cost?",
+   b_understand:"Their three options, the real cost of each, and what to bring",b_evidence:"Verified fees, ID rules, cheque limits from provider pages",
+   b_tone:"Reassuring, clear, practical",b_next:"Call ahead with the cheque amount, then visit with ID",
+   r1_name:"The person in a hurry",r1_situation:"Paid by cheque, bills due today",r1_goal:"Cash in hand within the hour",r1_obstacle:"Bank closed or holds funds",r1_concern:"Wasting a trip",r1_gap:"Which places cash cheques instantly",r1_decision:"Which location to go to",r1_success:"Walks in, walks out with cash",r1_first:"Hours, eligibility, instant availability",
+   h_rec:"Need to cash a cheque today?",h_rel:"The best place depends on your cheque, the fee you'll accept, and whether you have a bank account.",h_rew:"Compare your bank, the issuing bank and cheque-cashing services before paying a fee.",
+   e_text:"Choosing the right check-cashing company is very important because different companies provide different services and charge different fees, which is why customers should carefully evaluate their options before making a decision."});
+  d.questions=[{q:"How much does it cost to cash a cheque?",cat:"cost"},{q:"Can I cash a cheque without a bank account?",cat:"eligibility"},{q:"What ID do I need?",cat:"process"},{q:"What if the cheque bounces?",cat:"risk"}];
+  if(P().title==="Untitled article")P().title="Cheque cashing (example)";
+  P().updated=Date.now();save();renderProjects();fillAll();toast("Example loaded");
+}
+
+document.addEventListener("input",e=>{
+  const k=e.target.dataset&&e.target.dataset.k;if(!k)return;
+  D()[k]=e.target.type==="checkbox"?e.target.checked:e.target.value;P().updated=Date.now();save();refresh();
+});
+document.addEventListener("change",e=>{if(e.target.type==="checkbox"&&e.target.dataset.k){D()[e.target.dataset.k]=e.target.checked;save();refresh()}});
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button");if(!t)return;
+  if(t.dataset.tab){location.hash=t.dataset.tab;show(t.dataset.tab)}
+  else if(t.dataset.cat){cat=t.dataset.cat;document.querySelectorAll("[data-cat]").forEach(b=>b.setAttribute("aria-pressed",b===t))}
+  else if(t.dataset.reader){document.querySelectorAll("[data-reader]").forEach(b=>b.setAttribute("aria-pressed",b===t));renderReader(+t.dataset.reader)}
+  else if(t.dataset.rmq!=null){D().questions.splice(+t.dataset.rmq,1);save();renderQ()}
+  else if(t.dataset.rms!=null){D().sources.splice(+t.dataset.rms,1);save();renderS()}
+  else if(t.dataset.copy){copy(md(t.dataset.copy))}
+});
+$("#qAdd").onclick=()=>{const v=$("#qText").value.trim();if(!v)return;(D().questions=D().questions||[]).push({q:v,cat});$("#qText").value="";save();renderQ();toast("Added to "+cat)};
+$("#sAdd").onclick=()=>{const src=$("#sSrc").value.trim();if(!src){$("#sSrc").focus();return}(D().sources=D().sources||[]).push({src,claim:$("#sClaim").value.trim(),limit:$("#sLimit").value.trim(),date:$("#sDate").value});["#sSrc","#sClaim","#sLimit"].forEach(s=>$(s).value="");save();renderS();toast("Source logged")};
+$("#projSel").onchange=e=>{S.current=e.target.value;save();fillAll();renderReader(1);document.querySelectorAll("[data-reader]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.reader==="1"))};
+$("#newBtn").onclick=()=>{newProject("Untitled article");renderReader(1);$("#moreMenu").hidden=false;$("#moreBtn").setAttribute("aria-expanded","true");$("#titleIn").focus();location.hash="brief";show("brief")};
+$("#moreBtn").onclick=()=>{const m=$("#moreMenu");m.hidden=!m.hidden;$("#moreBtn").setAttribute("aria-expanded",String(!m.hidden));$("#delConfirm").hidden=true};
+$("#titleIn").oninput=e=>{P().title=e.target.value;save();renderProjects()};
+$("#exportBtn").onclick=()=>copy(md("all"));
+$("#exampleBtn").onclick=loadExample;
+$("#delBtn").onclick=()=>{$("#delConfirm").hidden=false};
+$("#delNo").onclick=()=>{$("#delConfirm").hidden=true};
+$("#delYes").onclick=()=>{delete S.projects[S.current];S.current=Object.keys(S.projects)[0]||null;if(!S.current)newProject("Untitled article",true);save();renderProjects();fillAll();renderReader(1);$("#delConfirm").hidden=true;toast("Deleted")};
+window.addEventListener("hashchange",()=>show(location.hash.slice(1)));
+
+// ================= AI: Architect + Coach =================
+const FRAMEWORK=`THE WRITER'S FRAMEWORK (follow it strictly)
+1. Brief first: topic, business/editorial goal, primary reader, the problem that brought them, the search intent to satisfy, what they should understand by the end, evidence needed, tone, next step.
+2. Research like an expert: understand the subject before the keyword; collect real reader questions (autocomplete, People Also Ask, reviews, Reddit, forums, support FAQs) and categorise them (cost, eligibility, process, risk, comparison, next steps); primary sources first (official provider pages for fees/policies, government/regulators for rules); find what ranking competitors leave unresolved; build a knowledge map: what readers must KNOW to understand, what they need to DECIDE/compare, what they need to ACT safely and confidently. Structure comes from these needs, not from competitor headings.
+3. Audience psychology: the same search hides different readers (e.g. the person in a hurry, the cost-conscious one, the one with an unusual case). For each: situation, goal, obstacle, concern, knowledge gap, decision, success. Ask "what is the reader trying to achieve, what might stop them, what moves them forward?" Treat assumptions as hypotheses.
+4. Hooks: Recognition -> Relevance -> Reward. Start with the reader's situation, use genuine tension, correct a reasonable misconception, use a concrete detail, deliver value quickly. A good hook earns attention; it never holds the answer hostage. Weak: a dictionary definition. Strong: a useful insight before asking for more time.
+5. Style: write like a knowledgeable person explaining; every paragraph does a job (answers, explains, supports, illustrates, helps decide); explain implications, not just facts; simple to complex; concrete examples and numbers; edit harder than you draft — cut filler, repetition, hype, vague statements. Simple without being simplistic, persuasive without being pushy. Put the important information first; make it scannable.
+6. Ghostwriting/brand voice: match the person's or brand's voice, separate their expertise from assumptions, build the argument before polishing.`;
+
+const FORMATS=["Auto","How-to guide","Comparison","Listicle","Explainer","Service / local page","Opinion / thought leadership"];
+let sampleFn=null, archCtl=null, coachCtl=null;
+const STAGE_LABEL={know:"Know",decide:"Decide",act:"Act"};
+
+function renderFmt(){const cur=D().a_fmt||"Auto";$("#fmtChips").innerHTML=FORMATS.map(f=>`<button type="button" class="chip" data-fmt="${esc(f)}" aria-pressed="${f===cur}">${esc(f)}</button>`).join("")}
+function errCopy(c){return({not_granted:"Claude access wasn't allowed for this page. You can allow it from the page's Permissions menu.",sampling_disabled:"Claude isn't available on this account here.",rate_limited:"Too many requests or a usage limit reached. Try again in a little while.",session_expired:"Please sign in to Claude again.",refused:"Claude couldn't help with that topic. Try rephrasing it.",invalid_json:"The answer came back in the wrong shape. Tap the button to try again.",prompt_too_large:"That's too much text at once. Try a shorter section.",empty_completion:"No answer came back. Try again with a clearer topic.",bad_key:"Your Claude API key was rejected. Check it in ⋯ → Claude API.",no_credit:"Your Claude API account is out of credit. Add credit in the Claude Console.",overloaded:"Claude is busy right now. Try again in a minute.",offline:"You're offline. AI features need an internet connection."})[c]||"Something went wrong reaching Claude. Try again."}
+function hideAI(){$("#aiOff").hidden=false;["#archGo","#coachGo"].forEach(s=>$(s).disabled=true)}
+
+function archPrompt(){
+  const d=D();
+  return `You are a senior content strategist and editor who trains writers. Using the framework below, design how a top writer would structure an article on this topic, and explain WHY, so the writer learns the thinking.
+
+${FRAMEWORK}
+
+TOPIC: ${d.a_topic}
+WHAT THE WRITER KNOWS: ${(d.a_ctx||"").trim()||"(nothing extra)"}
+ARTICLE TYPE: ${d.a_fmt&&d.a_fmt!=="Auto"?d.a_fmt:"choose the best type for the intent and say which in intent.format"}
+
+Rules:
+- Infer the real search intent and 2-3 distinct reader types who search this, each needing different information first.
+- The direct answer to the main question must arrive within the first two sections. Then help them decide, then help them act.
+- 6-10 H2 sections. Each gets: stage ("know", "decide" or "act"), the job it does for the reader, why it sits at this point in the flow (refer to the reader's state of mind at that moment), what to include, and optional H3s.
+- Find a genuine angle: what typical ranking articles leave unresolved.
+- Never invent statistics, fees, limits or laws. Where a specific figure is needed write it as [verify: what to check].
+- Match regional spelling and context if the writer's notes imply a country.
+- Plain, specific language. No hype.
+
+Reply with only one JSON object in exactly this shape:
+{"titles":["3 title options"],
+"intent":{"type":"informational|commercial|transactional|local|navigational","format":"article type","primary_question":"the question it must answer","really_wants":"what the searcher is actually trying to achieve"},
+"readers":[{"name":"short label","concern":"their real concern in their own words","needs_first":"what the article must give them first"}],
+"angle":"the missing value this article offers",
+"takeaway":"what the reader should understand by the end",
+"tone":"recommended tone in a few words",
+"hook":{"recognition":"","relevance":"","reward":"","opening":"a 2-3 sentence opening paragraph","why":"why this opening works"},
+"outline":[{"heading":"","stage":"know","job":"","why_here":"","include":["",""],"subs":["optional H3"]}],
+"flow_logic":"3-4 sentences on why this order works for this reader",
+"reader_questions":[{"q":"","cat":"cost|eligibility|process|risk|comparison|next steps"}],
+"evidence":[{"need":"claim or figure to verify","source":"best primary source type"}],
+"pitfalls":["mistakes average writers make on this topic"],
+"cta":"what the reader should do next",
+"length":"suggested length with a one-line reason"}`;
+}
+
+function renderArch(r){
+  const o=$("#archOut");
+  if(!r){o.innerHTML="";return}
+  const L=a=>Array.isArray(a)?a:[];
+  const li=a=>L(a).filter(Boolean).map(x=>`<li>${esc(x)}</li>`).join("");
+  const sec=(t,b)=>`<div class="rsec"><h2>${t}</h2>${b}</div>`;
+  let h="";
+  if(L(r.titles).length)h+=sec("Title options",`<ul>${li(r.titles)}</ul>`);
+  const it=r.intent||{};
+  h+=sec("Search intent",`<dl class="kv"><dt>Type</dt><dd>${esc(it.type||"")}${it.format?" · "+esc(it.format):""}</dd><dt>Question</dt><dd>${esc(it.primary_question||"")}</dd><dt>Really wants</dt><dd>${esc(it.really_wants||"")}</dd><dt>Takeaway</dt><dd>${esc(r.takeaway||"")}</dd><dt>Tone</dt><dd>${esc(r.tone||"")}</dd></dl>`);
+  if(L(r.readers).length)h+=sec("Who is searching",L(r.readers).map(x=>`<div class="example"><span class="lab good">${esc(x.name||"")}</span><q>${esc(x.concern||"")}</q><p>Give them first: ${esc(x.needs_first||"")}</p></div>`).join(""));
+  if(r.angle)h+=sec("Your angle",`<p class="angle">${esc(r.angle)}</p>`);
+  const hk=r.hook||{};
+  if(hk.opening)h+=sec("The opening",`<div class="flow"><span>Recognition</span><em>→</em><span>Relevance</span><em>→</em><span>Reward</span></div><dl class="kv"><dt>Recognise</dt><dd>${esc(hk.recognition||"")}</dd><dt>Relevance</dt><dd>${esc(hk.relevance||"")}</dd><dt>Reward</dt><dd>${esc(hk.reward||"")}</dd></dl><div class="example"><span class="lab good">Suggested opening</span><q>${esc(hk.opening)}</q><p>${esc(hk.why||"")}</p></div>`);
+  if(L(r.outline).length)h+=sec("The flow, section by section",L(r.outline).map((s,i)=>{const st=String(s.stage||"").toLowerCase();return `<div class="sec"><div class="num">${i+1}</div><div><h4>${esc(s.heading||"")}${STAGE_LABEL[st]?`<span class="stage ${st}">${STAGE_LABEL[st]}</span>`:""}</h4><p class="job">${esc(s.job||"")}</p><p class="why"><b>Why here</b> · ${esc(s.why_here||"")}</p>${L(s.include).length?`<ul>${li(s.include)}</ul>`:""}${L(s.subs).filter(Boolean).length?`<div class="subs">H3s: ${L(s.subs).filter(Boolean).map(esc).join(" · ")}</div>`:""}</div></div>`}).join(""));
+  if(r.flow_logic)h+=sec("Why this order works",`<p>${esc(r.flow_logic)}</p>`);
+  if(L(r.evidence).length)h+=sec("Evidence to gather",`<ul>${L(r.evidence).map(e=>`<li>${esc(e.need||"")}${e.source?` <span style="color:var(--muted)">(${esc(e.source)})</span>`:""}</li>`).join("")}</ul>`);
+  if(L(r.pitfalls).length)h+=sec("Mistakes to avoid",`<ul>${li(r.pitfalls)}</ul>`);
+  if(r.cta||r.length)h+=sec("Ending",`<dl class="kv"><dt>Next step</dt><dd>${esc(r.cta||"")}</dd><dt>Length</dt><dd>${esc(r.length||"")}</dd></dl>`);
+  h+=`<div class="row"><button class="btn" type="button" id="archUse">Use this in my brief</button><button class="btn ghost" type="button" id="archCopy">Copy outline</button><button class="btn ghost" type="button" id="archAgain">Try another angle</button></div>`;
+  o.innerHTML=h;
+  $("#archUse").onclick=()=>useArch(r);
+  $("#archCopy").onclick=()=>copy(archMd(r));
+  $("#archAgain").onclick=()=>runArch(true);
+}
+function archMd(r){
+  const L=a=>Array.isArray(a)?a:[];const out=[`# ${L(r.titles)[0]||D().a_topic}`,""];
+  if(r.hook&&r.hook.opening)out.push(r.hook.opening,"");
+  L(r.outline).forEach(s=>{out.push(`## ${s.heading}`,`_${s.job||""}_`);L(s.include).forEach(x=>out.push("- "+x));L(s.subs).filter(Boolean).forEach(x=>out.push("### "+x));out.push("")});
+  if(r.cta)out.push(`**Next step:** ${r.cta}`);
+  return out.join("\n");
+}
+function useArch(r){
+  const d=D(),L=a=>Array.isArray(a)?a:[];let n=0;
+  const put=(k,v)=>{if(v&&!(d[k]||"").trim()){d[k]=v;n++}};
+  const it=r.intent||{},rd=L(r.readers);
+  put("b_topic",d.a_topic);
+  put("b_reader",rd.map(x=>x.name).join("; "));
+  put("b_problem",it.really_wants);
+  put("b_intent",it.primary_question);
+  put("b_understand",r.takeaway);
+  put("b_evidence",L(r.evidence).map(e=>e.need).join("; "));
+  put("b_tone",r.tone);
+  put("b_next",r.cta);
+  put("comp_gap",r.angle);
+  ["know","decide","act"].forEach(st=>put("km_"+st,L(r.outline).filter(s=>String(s.stage).toLowerCase()===st).map(s=>"• "+s.heading).join("\n")));
+  rd.slice(0,3).forEach((x,i)=>{put(`r${i+1}_name`,x.name);put(`r${i+1}_concern`,x.concern);put(`r${i+1}_first`,x.needs_first)});
+  const hk=r.hook||{};put("h_rec",hk.recognition);put("h_rel",hk.relevance);put("h_rew",hk.reward);put("h_draft",hk.opening);
+  d.questions=d.questions||[];
+  L(r.reader_questions).forEach(q=>{if(q.q&&!d.questions.some(x=>x.q===q.q)){d.questions.push({q:q.q,cat:CATS.includes(q.cat)?q.cat:"process"});n++}});
+  if(P().title==="Untitled article"&&d.a_topic){P().title=d.a_topic;renderProjects();$("#titleIn").value=P().title}
+  P().updated=Date.now();save();fillAll();renderReader(1);
+  toast(n?`Filled ${n} empty fields`:"Your brief already had everything");
+}
+
+async function runArch(fresh){
+  const d=D();
+  if(!(d.a_topic||"").trim()){$("#f_a_topic").focus();$("#archStatus").className="status err";$("#archStatus").textContent="Type a topic first.";return}
+  if(!sampleFn){hideAI();return}
+  archCtl=new AbortController();
+  $("#archGo").disabled=true;$("#archStop").hidden=false;
+  const st=$("#archStatus");st.className="status";st.innerHTML=`<span class="pulse"></span>Thinking like an editor… this takes up to a minute`;
+  try{
+    const opts={signal:archCtl.signal,onText:({text})=>{st.innerHTML=`<span class="pulse"></span>Writing the structure… ${Math.round(text.length/6)} words`}};
+    if(fresh)opts.cache=false;
+    const r=await sampleFn.json(archPrompt(),opts);
+    if(!r||!Array.isArray(r.outline))throw{code:"invalid_json"};
+    D().arch=r;P().updated=Date.now();save();renderArch(r);st.textContent="";
+  }catch(e){
+    if(e&&e.code==="cancelled"){st.textContent="Stopped."}
+    else{st.className="status err";st.textContent=errCopy(e&&e.code);if(e&&["not_granted","sampling_disabled","not_declared","capability_disabled"].includes(e.code))hideAI()}
+  }finally{$("#archGo").disabled=!sampleFn;$("#archStop").hidden=true}
+}
+
+function mdToHtml(t){
+  const lines=esc(t).split("\n");let h="",inList=false;
+  const inline=s=>s.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/(^|[^*])\*(?!\s)(.+?)\*/g,"$1<em>$2</em>");
+  for(const raw of lines){const l=raw.trim();
+    if(/^[-*•]\s+/.test(l)){if(!inList){h+="<ul>";inList=true}h+=`<li>${inline(l.replace(/^[-*•]\s+/,""))}</li>`;continue}
+    if(inList){h+="</ul>";inList=false}
+    if(/^#{1,4}\s+/.test(l))h+=`<h3>${inline(l.replace(/^#+\s+/,""))}</h3>`;
+    else if(/^&gt;\s?/.test(l))h+=`<blockquote>${inline(l.replace(/^&gt;\s?/,""))}</blockquote>`;
+    else if(l)h+=`<p>${inline(l)}</p>`;}
+  if(inList)h+="</ul>";return h;
+}
+function coachPrompt(){
+  const d=D(),ctx=[];
+  BRIEF.forEach(b=>{if((d["b_"+b[0]]||"").trim())ctx.push(`${b[1]} ${d["b_"+b[0]]}`)});
+  if((d.r1_name||"").trim())ctx.push(`Main reader: ${d.r1_name}. Concern: ${d.r1_concern||"?"}. Needs first: ${d.r1_first||"?"}`);
+  if((d.v_adj||"").trim())ctx.push(`Voice: ${d.v_adj}`);
+  return `You are a demanding but kind senior editor coaching a writer who wants to write like a top professional. Review their writing using this framework:
+
+${FRAMEWORK}
+
+${ctx.length?"ARTICLE CONTEXT FROM THEIR BRIEF:\n"+ctx.join("\n")+"\n\n":""}THEIR WRITING:
+"""
+${(d.e_text||"").slice(0,24000)}
+"""
+
+Respond in plain Markdown with exactly these sections:
+## Verdict
+One or two sentences: how close this is to top-writer standard and the single biggest thing holding it back.
+## What's working
+2-3 bullets, specific.
+## Top fixes
+The 3-5 most important fixes, most important first. For each: a bold label, the problem in one sentence, WHY it matters to the reader (cite the framework idea), then
+> Before: (quote their words, short)
+> After: (your rewrite)
+## Hook check
+If there is an opening, rate Recognition, Relevance, Reward as Strong / Weak with one reason each. Otherwise skip with one line.
+## Structure and flow
+Does each paragraph do a job? Is the answer early? Does it move know → decide → act? Name concrete moves.
+## Tightened version
+Rewrite the first ~150 words (or the whole thing if shorter) the way a top writer would.
+## Habit to practise
+One habit to focus on next time.
+
+Never invent facts, fees or statistics; mark anything needing a number as [verify]. Keep the writer's meaning and voice.`;
+}
+async function runCoach(){
+  const d=D();
+  if((d.e_text||"").trim().split(/\s+/).length<15){$("#coachStatus").className="status err";$("#coachStatus").textContent="Paste at least a paragraph first.";$("#f_e_text").focus();return}
+  if(!sampleFn){hideAI();return}
+  coachCtl=new AbortController();
+  $("#coachGo").disabled=true;$("#coachStop").hidden=false;
+  const st=$("#coachStatus"),out=$("#coachOut");st.className="status";st.innerHTML=`<span class="pulse"></span>Reading your draft…`;
+  try{
+    const {text,truncated}=await sampleFn(coachPrompt(),{signal:coachCtl.signal,cache:false,onText:({text})=>{st.innerHTML=`<span class="pulse"></span>Writing feedback…`;out.innerHTML=mdToHtml(text)}});
+    out.innerHTML=mdToHtml(text);D().coach=text;save();st.textContent=truncated?"Feedback was cut short. Try a shorter section.":"";
+  }catch(e){
+    if(e&&e.text)out.innerHTML=mdToHtml(e.text);
+    if(e&&e.code==="cancelled"){st.textContent="Stopped."}
+    else{if(e&&e.code==="refused")out.innerHTML="";st.className="status err";st.textContent=errCopy(e&&e.code);if(e&&["not_granted","sampling_disabled","not_declared","capability_disabled"].includes(e.code))hideAI()}
+  }finally{$("#coachGo").disabled=!sampleFn;$("#coachStop").hidden=true}
+}
+
+$("#archGo").onclick=()=>runArch(false);
+$("#archStop").onclick=()=>archCtl&&archCtl.abort();
+$("#coachGo").onclick=runCoach;
+$("#coachStop").onclick=()=>coachCtl&&coachCtl.abort();
+document.addEventListener("click",e=>{const b=e.target.closest("[data-fmt]");if(!b)return;D().a_fmt=b.dataset.fmt;save();renderFmt()});
+window.renderArch=renderArch;
+
+(async()=>{try{sampleFn=window.claude&&window.claude.use?await window.claude.use("sample"):null}catch(e){sampleFn=null}if(!sampleFn)hideAI()})();
+
+load();build();renderProjects();fillAll();show(location.hash.slice(1));
+</script>
+
+<script>
+// ---- App extras: offline, install, file backup, API settings ----
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+(function(){
+  const standalone=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  let dismissed=false;try{dismissed=localStorage.getItem("wd-install-x")==="1"}catch(e){}
+  const bar=$("#installBar"),btn=$("#installBtn");let deferred=null;
+  if(standalone||dismissed)return;
+  window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferred=e;bar.hidden=false});
+  if(/iphone|ipad|ipod/i.test(navigator.userAgent)){bar.hidden=false;btn.hidden=true;$("#installMsg").innerHTML="To install: tap <b>Share</b>, then <b>Add to Home Screen</b>."}
+  btn.onclick=async()=>{if(!deferred)return;deferred.prompt();await deferred.userChoice;deferred=null;bar.hidden=true};
+  $("#installX").onclick=()=>{bar.hidden=true;try{localStorage.setItem("wd-install-x","1")}catch(e){}};
+  window.addEventListener("appinstalled",()=>{bar.hidden=true;toast("Installed")});
+})();
+$("#backupBtn").onclick=async()=>{
+  const name="writers-desk-backup-"+new Date().toISOString().slice(0,10)+".json";
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+  try{const f=new File([blob],name,{type:"application/json"});
+    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:"Writer's Desk backup"});return}}catch(e){if(e.name==="AbortError")return}
+  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),2000);toast("Backup saved");
+};
+$("#restoreIn").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!d.projects)throw 0;
+    Object.assign(S.projects,d.projects);S.current=d.current&&S.projects[d.current]?d.current:Object.keys(S.projects)[0];
+    save();renderProjects();fillAll();renderReader(1);toast("Restored "+Object.keys(d.projects).length+" article(s)")}
+    catch(err){toast("That file isn't a Writer's Desk backup")}e.target.value=""};r.readAsText(f)};
+
+// API settings
+function closeMenu(){["#moreMenu","#apiPanel","#delConfirm"].forEach(x=>$(x).hidden=true);$("#moreBtn").setAttribute("aria-expanded","false")}
+document.addEventListener("click",e=>{if(e.target.closest("[data-tab]"))closeMenu()});
+function openApi(){$("#moreMenu").hidden=false;$("#moreBtn").setAttribute("aria-expanded","true");$("#apiPanel").hidden=false;$("#apiKeyIn").value=apiKey();$("#apiModelIn").value=apiModel();window.scrollTo(0,0);$("#apiKeyIn").focus()}
+function aiOn(){sampleFn=apiSample;$("#aiOff").hidden=true;$("#archGo").disabled=false;$("#coachGo").disabled=false}
+$("#apiBtn").onclick=()=>{const p=$("#apiPanel");if(p.hidden)openApi();else p.hidden=true};
+$("#aiSetup").onclick=openApi;
+$("#apiShow").onclick=()=>{const i=$("#apiKeyIn");const show=i.type==="password";i.type=show?"text":"password";$("#apiShow").textContent=show?"Hide":"Show"};
+$("#apiSave").onclick=async()=>{
+  const key=$("#apiKeyIn").value.trim(),st=$("#apiStatus");
+  if(!key.startsWith("sk-ant-")){st.className="status err";st.textContent="That doesn't look like a Claude API key. It starts with sk-ant-";return}
+  try{localStorage.setItem(WD_API.k,key);localStorage.setItem(WD_API.m,$("#apiModelIn").value)}catch(e){st.className="status err";st.textContent="This browser won't let the app save the key.";return}
+  st.className="status";st.innerHTML='<span class="pulse"></span>Testing connection…';$("#apiSave").disabled=true;
+  try{await apiSample("Reply with the single word: connected",{_max:16});st.className="status";st.style.color="var(--ok)";st.textContent="Connected. The Architect and Coach are ready.";aiOn();toast("Claude API connected");setTimeout(closeMenu,900)}
+  catch(e){st.style.color="";st.className="status err";st.textContent=errCopy(e&&e.code)+(e&&e.code==="upstream_error"&&e.message?" ("+String(e.message).slice(0,140)+")":"")}
+  finally{$("#apiSave").disabled=false}
+};
+$("#apiModelIn").onchange=e=>{try{localStorage.setItem(WD_API.m,e.target.value)}catch(err){}};
+$("#apiRemove").onclick=()=>{try{localStorage.removeItem(WD_API.k)}catch(e){}$("#apiKeyIn").value="";sampleFn=null;hideAI();$("#apiStatus").className="status";$("#apiStatus").style.color="";$("#apiStatus").textContent="Key removed from this device.";};
+if(apiKey())aiOn();
+</script>
+</body>
+</html>

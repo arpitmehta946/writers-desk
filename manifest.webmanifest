@@ -1,8 +1,8 @@
 {
   "name": "Writer's Desk",
   "short_name": "Writer's Desk",
-  "description": "Plan, research and edit articles like a top writer, with an AI Article Architect and writing coach.",
-  "start_url": "./index.html#architect",
+  "description": "Plan, write and improve articles like a top writer.",
+  "start_url": "./index.html#write",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
@@ -15,7 +15,7 @@
     {"src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
   ],
   "shortcuts": [
-    {"name": "Article Architect", "url": "./index.html#architect"},
-    {"name": "Edit desk", "url": "./index.html#edit"}
+    {"name": "Write an article", "url": "./index.html#write"},
+    {"name": "Improve my writing", "url": "./index.html#improve"}
   ]
 }

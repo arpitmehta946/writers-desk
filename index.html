@@ -42,7 +42,7 @@ header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background
 .brand{font-family:var(--display);font-weight:700;font-size:18px}
 .brand b{color:var(--accent)}
 .hdr-actions{display:flex;gap:8px}
-.tabs{display:grid;grid-template-columns:1fr 1fr}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr)}
 .tab{font-family:var(--display);font-weight:500;font-size:15px;background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);padding:8px 4px 10px;cursor:pointer}
 .tab[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent)}
 .confirm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding-block:0 12px;font-size:15px}
@@ -157,6 +157,23 @@ details.more summary{font-family:var(--display);font-size:15px;color:var(--accen
 .preview p:last-child{margin-bottom:0}
 .foot{color:var(--muted);font-size:14px;text-align:center;margin:4px 0 0}
 
+
+/* LinkedIn preview */
+.blk{display:flex;flex-direction:column;gap:6px}
+.lipost{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:14px}
+.lihead{display:flex;gap:10px;align-items:center;margin-bottom:10px}
+.lihead > div{min-width:0}
+.avatar{width:40px;height:40px;flex:none;border-radius:50%;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center;font-family:var(--display);font-weight:700;font-size:13px}
+.lihead b{font-family:var(--display);font-size:15px;display:block}
+.lihead > div > span{display:block;font-size:13px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.litext{white-space:pre-wrap;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;font-size:15px;line-height:1.5;overflow-wrap:anywhere}
+.fold{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted);border-top:1px dashed var(--muted);margin:10px 0;padding-top:4px}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:14px;color:var(--accent);font-weight:600}
+.hookbtn{display:block;width:100%;text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:6px;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.4;cursor:pointer;white-space:pre-wrap}
+.hookbtn:hover{border-color:var(--accent)}
+.whyrow{padding:8px 0;border-top:1px dashed var(--line);font-size:15px}
+.whyrow b{font-family:var(--display);font-weight:500}
+.tipline{font-size:15px;background:var(--accent-soft);border-radius:10px;padding:10px 12px;margin:0}
 /* "use your Claude app" sheet */
 .sheet-bg{position:fixed;inset:0;background:rgba(10,12,18,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--surface);color:var(--ink);width:min(100%,560px);max-height:88vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
@@ -203,8 +220,9 @@ body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none
       <span class="status" id="apiStatus"></span>
     </div>
     <div class="tabs" role="tablist">
-      <button class="tab" type="button" role="tab" data-tab="write" aria-selected="true">Write an article</button>
-      <button class="tab" type="button" role="tab" data-tab="improve" aria-selected="false">Improve my writing</button>
+      <button class="tab" type="button" role="tab" data-tab="write" aria-selected="true">Article</button>
+      <button class="tab" type="button" role="tab" data-tab="linkedin" aria-selected="false">LinkedIn</button>
+      <button class="tab" type="button" role="tab" data-tab="improve" aria-selected="false">Improve</button>
     </div>
   </div>
 </header>
@@ -261,6 +279,62 @@ body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none
     <div class="row"><button class="btn" type="button" id="checkBtn">Check the article</button><span class="status" id="checkStatus"></span></div>
     <div id="checkOut"></div>
     <div class="row" id="fixRow" hidden><button class="btn" type="button" id="fixBtn">Fix these issues</button><span class="status" id="fixStatus"></span></div>
+  </div>
+</section>
+
+
+<!-- ============ LINKEDIN ============ -->
+<section data-view="linkedin" hidden style="display:flex;flex-direction:column;gap:16px">
+  <p class="lead">Write LinkedIn content the way top ghostwriters do.</p>
+
+  <div class="card">
+    <div class="sh"><span class="num">1</span><h2>What do you want to write?</h2></div>
+    <div class="chips" id="liTypeChips" role="group" aria-label="Content type"></div>
+    <textarea id="liTopic" placeholder="What's it about? e.g. the mistake I made hiring my first salesperson" aria-label="What it's about"></textarea>
+    <textarea id="liDetails" placeholder="Your real details (optional): the story, numbers, what you learned. Real detail is what makes it sound like you." aria-label="Your real details"></textarea>
+    <div class="optlabel">Who is it for?</div>
+    <div class="chips" id="liAudChips" role="group" aria-label="Target group"></div>
+    <input type="text" id="liAudCustom" placeholder="Or describe them: e.g. first-time managers in Indian startups" aria-label="Describe your target group">
+    <div class="optlabel">Tone</div>
+    <div class="chips" id="liToneChips" role="group" aria-label="Tone"></div>
+    <details class="opts"><summary>More options</summary>
+      <div class="optlabel">Length</div><div class="chips" id="liLenChips"></div>
+      <div class="optlabel">Writing for someone else?</div>
+      <textarea id="liForWho" placeholder="Their role and how they talk, or paste a post they wrote so it matches their voice." aria-label="Ghostwriting for"></textarea>
+    </details>
+    <div class="row"><button class="btn" type="button" id="liGo">Write it</button><span class="status" id="liStatus"></span></div>
+  </div>
+
+  <div class="card" id="liS2" hidden>
+    <div class="sh"><span class="num">2</span><h2 id="liOutTitle">Your post</h2></div>
+    <div class="meta" id="liMeta"></div>
+    <div class="row">
+      <button class="btn ghost small" type="button" id="liCopy">Copy</button>
+      <button class="btn ghost small" type="button" id="liEdit">Edit</button>
+      <button class="btn ghost small" type="button" id="liUndo" hidden>Undo</button>
+    </div>
+    <textarea class="editbox" id="liEditBox" hidden style="min-height:300px" aria-label="Post text"></textarea>
+    <div class="lipost" id="liPreview">
+      <div class="lihead"><span class="avatar">You</span><div><b id="liWho">You</b><span id="liAudLine"></span></div></div>
+      <div id="liText"></div>
+      <div class="tags" id="liTags"></div>
+    </div>
+
+    <div class="blk" id="liHooksWrap"><span class="lbl">Other openings · tap to use</span><div id="liHooks"></div></div>
+
+    <div class="blk"><span class="lbl">Change it</span>
+      <div class="chips" id="liTweaks"></div>
+      <span class="status" id="liTweakStatus"></span>
+    </div>
+
+    <div class="blk" id="liWhyWrap"><span class="lbl">Why it works for this reader</span><div id="liWhy"></div></div>
+
+    <div class="aibox">
+      <div class="aihead"><h3>Words that sound like AI</h3><span class="verdict" id="liVerdict"></span></div>
+      <p class="help" id="liSummary"></p>
+      <div id="liList"></div>
+      <div class="row" id="liFixRow"><button class="btn" type="button" id="liFix">Fix AI phrases</button><span class="status" id="liFixStatus"></span></div>
+    </div>
   </div>
 </section>
 
@@ -340,7 +414,8 @@ function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clea
 
 // ---------- session-only state ----------
 const KEY="wd-session";
-const EMPTY=()=>({tab:"write",topic:"",notes:"",fmt:"Auto",len:"As suggested",plan:null,draft:"",draftPrev:"",check:null,text:"",textPrev:"",coach:""});
+const LI_EMPTY=()=>({type:"Post",topic:"",details:"",aud:"Founders & CEOs",audCustom:"",tone:"Conversational",len:"Medium",forWho:"",out:null,prev:null});
+const EMPTY=()=>({li:LI_EMPTY(),tab:"write",topic:"",notes:"",fmt:"Auto",len:"As suggested",plan:null,draft:"",draftPrev:"",check:null,text:"",textPrev:"",coach:""});
 let S=EMPTY();
 try{const r=sessionStorage.getItem(KEY);if(r)S=Object.assign(EMPTY(),JSON.parse(r))}catch(e){}
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{sessionStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},200)}
@@ -456,6 +531,19 @@ function highlightAI(root,active){
   });
 }
 
+AI_CATS.push("LinkedIn clichés");
+[[/\b(?:I'?m|I am|we'?re|we are) (?:so )?(?:thrilled|excited|humbled|honou?red|delighted|proud) to (?:announce|share)\b/gi,"I'm thrilled to announce",6,"Just say what happened and why it matters to the reader."],
+ [/\blet that sink in\b/gi,"let that sink in",6,"Cut it. If the point is strong, it lands on its own."],
+ [/\bhere'?s the thing\b/gi,"here's the thing",6,"Cut it and make the point."],
+ [/\bread that again\b|\bI'?ll say it (?:again|louder)\b/gi,"read that again",6,"Cut it."],
+ [/\bunpopular opinion\b|\bhot take\b/gi,"unpopular opinion",6,"State the opinion and back it up."],
+ [/\b(?:stop scrolling|nobody(?:'s| is)? talk(?:s|ing)? about|no one is talking about)\b/gi,"stop scrolling / nobody talks about",6,"Open with the reader's situation instead."],
+ [/(?:^|\n)\s*(?:Agree|Thoughts|Thoughts\?|Am I wrong)\?*\s*$/gim,"Agree? / Thoughts?",6,"End with a specific question the reader can actually answer."],
+ [/\b(?:comment|drop|type) (?:a |an )?["“']?\w+["”']? (?:below|in the comments)\b|\brepost (?:this|if)\b|♻️/gi,"engagement bait",6,"Ask a real question instead of asking for a word or a repost."],
+ [/\b(?:humbled|blessed|grateful beyond words)\b/gi,"humbled / blessed",6,"Show the moment instead of labelling the feeling."],
+ [/\b(?:a )?masterclass in\b|\bthis is (?:huge|massive|everything)\b/gi,"masterclass / this is huge",6,"Say what specifically was good."],
+ [/[\u{1F680}\u{1F525}\u{1F4A1}\u{1F449}\u{1F447}\u{2705}\u{2728}\u{1F4AF}\u{1F64C}\u{1F44F}]/gu,"emoji overload",6,"Use one or two emojis at most, or none.",4]
+].forEach(x=>AI_PATTERNS.push(x));
 let aiPopT;
 function aiPop(i){const p=AI_PATTERNS[i];if(!p)return;let el=$("#aiPop");if(!el){el=document.createElement("div");el.id="aiPop";el.className="aipop";el.setAttribute("role","status");document.body.appendChild(el)}el.innerHTML=`<b>${esc(p[1])}</b> · ${esc(AI_CATS[p[2]])}<br>${esc(p[3])}`;el.hidden=false;clearTimeout(aiPopT);aiPopT=setTimeout(()=>el.hidden=true,4500)}
 document.addEventListener("click",e=>{const m=e.target.closest("mark.ai");if(m&&!m.closest(".aioff"))aiPop(+m.dataset.p)});
@@ -706,14 +794,16 @@ function renderText(){
   $("#coachOut").innerHTML=S.coach?mdToHtml(S.coach):"";
 }
 function showTab(t){
-  if(t!=="improve")t="write";S.tab=t;save();
+  if(!["write","linkedin","improve"].includes(t))t="write";S.tab=t;save();
   document.querySelectorAll("[data-view]").forEach(v=>v.hidden=v.dataset.view!==t);
   document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===t)));
 }
 function renderAll(){
   $("#topic").value=S.topic;$("#notes").value=S.notes;$("#text").value=S.text;
   editing=false;$("#draftEdit").hidden=true;$("#draftOut").hidden=false;$("#editBtn").textContent="Edit";
-  renderChips();renderPlan();renderDraft();renderText();showTab(S.tab);
+  $("#liTopic").value=S.li.topic;$("#liDetails").value=S.li.details;$("#liAudCustom").value=S.li.audCustom;$("#liForWho").value=S.li.forWho;
+  liEditing=false;$("#liEditBox").hidden=true;$("#liPreview").hidden=false;$("#liEdit").textContent="Edit";
+  renderChips();renderPlan();renderDraft();renderText();renderLI();showTab(S.tab);
 }
 function setDraft(t,keepPrev){S.draftPrev=keepPrev&&S.draft?S.draft:"";S.draft=t.trim();S.check=null;save();editing=false;$("#draftEdit").hidden=true;$("#draftOut").hidden=false;$("#editBtn").textContent="Edit";renderDraft()}
 
@@ -778,13 +868,135 @@ $("#tFixBtn").onclick=()=>{
 };
 $("#tUndoBtn").onclick=()=>{if(!S.textPrev)return;S.text=S.textPrev;S.textPrev="";save();$("#text").value=S.text;renderText()};
 
+
+// ================= LinkedIn =================
+const LI_TYPES=["Post","Story","Carousel","Headline + About","Comment","Message"];
+const LI_AUD=["Founders & CEOs","Marketers","Recruiters & HR","Job seekers","Small business owners","Sales leaders","Tech professionals","Students & graduates"];
+const LI_TONES=["Conversational","Professional","Bold & contrarian","Storytelling","Inspiring","Witty","Empathetic","Data-driven"];
+const LI_LENS=["Short","Medium","Long"];
+const LI_TYPE_GUIDE={
+ "Post":"A feed post. Pick the best structure for the idea (insight, how-to, contrarian, list or announcement).",
+ "Story":"A story post: a specific moment, the tension, the turn, the lesson, then a question for the reader.",
+ "Carousel":"Text for a carousel (PDF slides). 6-10 slides, each written as 'Slide N:' then a short headline and at most 25 words. Slide 1 is the hook; the last slide is the takeaway and next step. After the slides add 'Caption:' with a 2-4 line post to go with it.",
+ "Headline + About":"A profile headline (under 220 characters) labelled 'Headline:' and an About section labelled 'About:' in first person, 150-300 words, whose first two lines hook the target reader.",
+ "Comment":"A comment on someone else's post (the writer pasted it, or describes it, in the details). 2-5 sentences that add a real point or experience. No flattery, no 'Great post!'.",
+ "Message":"A short, personal LinkedIn message (under 80 words) with one clear, low-pressure ask. No pitch-slapping."
+};
+const LI_LEN_GUIDE={"Short":"short (about 60-100 words for a post)","Medium":"medium (about 120-180 words for a post)","Long":"long (about 200-300 words for a post)"};
+const LI_GUIDE=`LINKEDIN GHOSTWRITING FRAMEWORK (follow strictly)
+- The hook is the first one or two lines: all readers see before "...see more". It must make the target reader stop: name their situation, a surprising specific, a real tension, or a clear promise. Recognition -> relevance -> reward. Never clickbait the post can't pay off.
+- One idea per piece. Write to one person in the target group, in their words, about their worries and goals. Ask: what are they trying to achieve, what stops them, what moves them forward?
+- Built for a phone: short lines, 1-2 sentence paragraphs, a blank line between them. Plain text only: no markdown, asterisks or headings. Simple "-" or "→" bullets only when listing.
+- Specific beats general: a real moment, number, mistake or result. Show, don't tell. Explain why it matters to the reader.
+- Credible, human and generous: give the insight away. No humblebragging, no "broetry" (one-word lines for drama), no motivational fluff.
+- End with a natural, specific question or a clear next step. Never "Agree?", "Thoughts?" or engagement bait.
+- Keep hashtags out of the text (max 3, returned separately).
+- Avoid AI and LinkedIn clichés: delve, landscape, journey, game-changer, unlock, elevate, leverage, seamless, crucial, "I'm thrilled to announce", "let that sink in", "here's the thing", "read that again", "unpopular opinion", "nobody talks about this", "in today's fast-paced world". Few em dashes, almost no exclamation marks, at most one or two emojis.
+- NEVER invent personal experiences, clients, results, numbers, names or quotes. Where a real story or figure is needed and the writer didn't give one, write [add: what real detail to put here].`;
+const LI_TWEAKS=[["Shorter","Make it about 30% shorter without losing the core idea or the hook."],["Punchier hook","Rewrite the first two lines so the target reader can't scroll past, without clickbait."],["More personal","Make it more personal and story-led, in first person. Use [add: ...] wherever a real detail is missing."],["Simpler words","Use simpler, more conversational words and shorter sentences."],["Stronger ending","Rewrite the ending so it closes on a specific question or next step the reader will want to answer."],["New version","Write a clearly different version: a different angle, structure and hook on the same idea."]];
+
+function liAud(){return S.li.audCustom.trim()||S.li.aud}
+function liIsPost(){return S.li.type==="Post"||S.li.type==="Story"}
+function liPrompt(change){const L=S.li,cur=L.out&&L.out.content;return `You are one of the best LinkedIn ghostwriters in the world. You write for founders, executives and experts, and your posts read like a smart, real person, never like AI.
+
+${LI_GUIDE}
+
+WHAT TO WRITE: ${L.type}. ${LI_TYPE_GUIDE[L.type]}
+TARGET READER: ${liAud()}
+TONE: ${L.tone}
+LENGTH: ${LI_LEN_GUIDE[L.len]}${L.type==="Post"||L.type==="Story"?"":" (adapt to the format's own limits)"}
+TOPIC / IDEA: ${L.topic}
+REAL DETAILS FROM THE WRITER: ${L.details.trim()||"(none given — use [add: ...] placeholders where a real story or number is needed)"}
+VOICE: ${L.forWho.trim()?"You are ghostwriting for this person. Match how they think and talk: "+L.forWho:"The writer themself, in first person."}
+${change&&cur?`
+CHANGE REQUESTED: ${change}
+CURRENT VERSION:
+"""
+${cur}
+"""
+Rewrite it with this change and keep what already works.
+`:""}
+Reply with only one JSON object:
+{"content": "the full text exactly as it should be pasted into LinkedIn: plain text, \\n for line breaks, no hashtags in it",
+"hooks": [${liIsPost()?'"3 alternative opening lines (each 1-2 lines) with different approaches"':""}],
+"why": [{"part": "e.g. Hook, Structure, Ending, Word choice", "reason": "why this choice works for this specific reader and tone"}],
+"hashtags": ["up to 3 relevant hashtags"${L.type==="Post"||L.type==="Story"||L.type==="Carousel"?"":", or none"}],
+"tip": "one practical tip for posting or using this"}
+Give 3-5 "why" items.`}
+
+function liFmt(t){return esc(t).replace(/\[(add|verify):([^\]]*)\]/gi,'<mark class="verify">[$1:$2]</mark>')}
+function liFoldAt(t){let nl=0;for(let i=0;i<t.length;i++){if(t[i]==="\n"){nl++;if(nl>=3)return i}if(i>=210){const sp=t.lastIndexOf(" ",i);return sp>150?sp:i}}return t.length}
+function renderLIForm(){
+  const L=S.li,chip=(arr,cur,attr)=>arr.map(x=>`<button type="button" class="chip" data-${attr}="${esc(x)}" aria-pressed="${x===cur}">${esc(x)}</button>`).join("");
+  $("#liTypeChips").innerHTML=chip(LI_TYPES,L.type,"litype");
+  $("#liAudChips").innerHTML=chip(LI_AUD,L.audCustom.trim()?"":L.aud,"liaud");
+  $("#liToneChips").innerHTML=chip(LI_TONES,L.tone,"litone");
+  $("#liLenChips").innerHTML=chip(LI_LENS,L.len,"lilen");
+  $("#liTweaks").innerHTML=LI_TWEAKS.map((t,i)=>`<button type="button" class="chip" data-tweak="${i}" id="liTw${i}">${esc(t[0])}</button>`).join("");
+  $("#liGo").textContent=L.out?"Write again":"Write it";
+}
+let liEditing=false;
+function renderLI(){
+  const L=S.li,o=L.out;$("#liS2").hidden=!o;renderLIForm();if(!o)return;
+  const A=a=>Array.isArray(a)?a:[],t=String(o.content||"");
+  $("#liOutTitle").textContent=({"Post":"Your post","Story":"Your story post","Carousel":"Your carousel","Headline + About":"Your headline and About","Comment":"Your comment","Message":"Your message"})[L.type]||"Your post";
+  const adds=(t.match(/\[(?:add|verify):/gi)||[]).length;
+  $("#liMeta").textContent=`${t.length.toLocaleString()} / 3,000 characters · ${wc(t)} words${adds?` · ${adds} real detail${adds>1?"s":""} to add`:""}`;
+  $("#liAudLine").textContent=`For ${liAud()} · ${L.tone}`;
+  $("#liWho").textContent=L.forWho.trim()?"Ghostwritten post":"You";
+  if(!liEditing){
+    const fold=liIsPost()?liFoldAt(t):t.length,top=t.slice(0,fold),rest=t.slice(fold);
+    $("#liText").innerHTML=`<div class="litext">${liFmt(top)}</div>`+(rest.trim()?`<div class="fold">↑ Readers see this much before “…see more”</div><div class="litext">${liFmt(rest.replace(/^\n/,""))}</div>`:"");
+    highlightAI($("#liText"),aiActiveSet(t));
+  }
+  $("#liTags").innerHTML=A(o.hashtags).slice(0,3).map(h=>`<span>${esc(String(h).startsWith("#")?h:"#"+h)}</span>`).join("");
+  $("#liHooksWrap").hidden=!(liIsPost()&&A(o.hooks).length);
+  $("#liHooks").innerHTML=A(o.hooks).map((h,i)=>`<button type="button" class="hookbtn" data-hook="${i}">${liFmt(h)}</button>`).join("");
+  $("#liWhyWrap").hidden=!A(o.why).length&&!o.tip;
+  $("#liWhy").innerHTML=A(o.why).map(w=>`<div class="whyrow"><b>${esc(w.part)}</b> · ${esc(w.reason)}</div>`).join("")+(o.tip?`<p class="tipline"><b>Posting tip:</b> ${esc(o.tip)}</p>`:"");
+  const total=renderPatterns(t,{verdict:"#liVerdict",summary:"#liSummary",list:"#liList",scope:"#liText"});
+  $("#liFixRow").hidden=!total;$("#liUndo").hidden=!L.prev;
+}
+function liLoad(r){if(!r||typeof r!=="object"||typeof r.content!=="string"||r.content.trim().length<20)return "That doesn't look like the full answer. Copy Claude's whole reply, including the code block.";S.li.prev=S.li.out?JSON.parse(JSON.stringify(S.li.out)):null;r.content=r.content.replace(/\\n/g,"\n").trim();S.li.out=r;save();liEditing=false;$("#liEditBox").hidden=true;$("#liPreview").hidden=false;$("#liEdit").textContent="Edit";renderLI();setTimeout(()=>$("#liS2").scrollIntoView({behavior:"smooth",block:"start"}),50)}
+function liRun(btn,status,change,busy){
+  if(!S.li.topic.trim()&&!change){$("#liTopic").focus();$("#liStatus").className="status err";$("#liStatus").textContent="Tell me what it's about first.";return}
+  runAI({btn,status,prompt:()=>liPrompt(change),json:true,busy,
+    onText:(x,st)=>{st.innerHTML=`<span class="pulse"></span>${change?"Rewriting…":"Writing…"}`},
+    done:(r,st)=>{const err=liLoad(r);if(err){st.className="status err";st.textContent=errCopy("invalid_json")}},
+    manual:t=>liLoad(parseLoose(t))});
+}
+$("#liGo").onclick=()=>liRun("#liGo","#liStatus",null,"Writing like a top ghostwriter…");
+$("#liTopic").oninput=e=>{S.li.topic=e.target.value;save()};
+$("#liDetails").oninput=e=>{S.li.details=e.target.value;save()};
+$("#liForWho").oninput=e=>{S.li.forWho=e.target.value;save()};
+$("#liAudCustom").oninput=e=>{S.li.audCustom=e.target.value;save();renderLIForm();if(S.li.out)$("#liAudLine").textContent=`For ${liAud()} · ${S.li.tone}`};
+document.addEventListener("click",e=>{
+  let b;
+  if((b=e.target.closest("[data-litype]"))){S.li.type=b.dataset.litype;save();renderLIForm();return}
+  if((b=e.target.closest("[data-liaud]"))){S.li.aud=b.dataset.liaud;S.li.audCustom="";$("#liAudCustom").value="";save();renderLIForm();return}
+  if((b=e.target.closest("[data-litone]"))){S.li.tone=b.dataset.litone;save();renderLIForm();if(S.li.out)toast("Tone set. Tap “Write again” to rewrite in it.");return}
+  if((b=e.target.closest("[data-lilen]"))){S.li.len=b.dataset.lilen;save();renderLIForm();return}
+  if((b=e.target.closest("[data-tweak]"))){const t=LI_TWEAKS[+b.dataset.tweak];liRun("#"+b.id,"#liTweakStatus",t[1],t[0]+"…");return}
+  if((b=e.target.closest("[data-hook]"))){
+    const o=S.li.out,i=+b.dataset.hook,parts=o.content.split(/\n\s*\n/);const old=parts[0];parts[0]=o.hooks[i];o.hooks[i]=old;o.content=parts.join("\n\n");save();renderLI();toast("Opening swapped");return}
+});
+$("#liCopy").onclick=()=>{const o=S.li.out;if(!o)return;const tags=(Array.isArray(o.hashtags)?o.hashtags:[]).slice(0,3).map(h=>String(h).startsWith("#")?h:"#"+h).join(" ");const t=o.content+(tags?"\n\n"+tags:"");try{navigator.clipboard.writeText(t).then(()=>toast(/\[(?:add|verify):/i.test(t)?"Copied. Replace the [add: …] parts before posting.":"Copied. Ready to paste into LinkedIn."),()=>{if(!liEditing)$("#liEdit").click()})}catch(e){}};
+$("#liEdit").onclick=()=>{liEditing=!liEditing;const ta=$("#liEditBox");ta.hidden=!liEditing;$("#liPreview").hidden=liEditing;$("#liEdit").textContent=liEditing?"Done":"Edit";if(liEditing){ta.value=S.li.out.content;ta.focus()}else{S.li.out.content=ta.value;save();renderLI()}};
+$("#liEditBox").oninput=e=>{S.li.out.content=e.target.value;save()};
+$("#liUndo").onclick=()=>{if(!S.li.prev)return;S.li.out=S.li.prev;S.li.prev=null;save();renderLI();toast("Previous version restored")};
+$("#liFix").onclick=()=>{
+  const before=aiScan(S.li.out.content).reduce((a,f)=>a+f.count,0);
+  const apply=t=>{S.li.prev=JSON.parse(JSON.stringify(S.li.out));S.li.out.content=stripFence(t);save();renderLI();toast(`AI phrases: ${before} → ${aiScan(S.li.out.content).reduce((a,f)=>a+f.count,0)}`)};
+  runAI({btn:"#liFix",status:"#liFixStatus",prompt:()=>fixAIPrompt(S.li.out.content,false)+"\nKeep it plain text for LinkedIn: no markdown, keep the line breaks.",busy:"Rewriting the AI-sounding lines…",done:({text})=>apply(text),manual:t=>{if(!t.trim())return "Paste the rewritten post.";apply(t)}});
+};
+
 // ---------- start over ----------
 $("#clearBtn").onclick=()=>{$("#clearConfirm").hidden=false};
 $("#clearNo").onclick=()=>{$("#clearConfirm").hidden=true};
 $("#clearYes").onclick=()=>{
   document.querySelectorAll("[data-running]").forEach(b=>b._ctl&&b._ctl.abort());
   const tab=S.tab;S=EMPTY();S.tab=tab;try{sessionStorage.removeItem(KEY)}catch(e){}
-  ["#planStatus","#writeStatus","#aiFixStatus","#checkStatus","#fixStatus","#coachStatus"].forEach(x=>$(x).textContent="");
+  ["#planStatus","#writeStatus","#aiFixStatus","#checkStatus","#fixStatus","#coachStatus","#liStatus","#liTweakStatus","#liFixStatus"].forEach(x=>$(x).textContent="");
   $("#clearConfirm").hidden=true;renderAll();window.scrollTo(0,0);toast("Cleared. Fresh start.");
 };
 

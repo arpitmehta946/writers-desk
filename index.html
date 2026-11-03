@@ -174,6 +174,17 @@ details.more summary{font-family:var(--display);font-size:15px;color:var(--accen
 .whyrow{padding:8px 0;border-top:1px dashed var(--line);font-size:15px}
 .whyrow b{font-family:var(--display);font-weight:500}
 .tipline{font-size:15px;background:var(--accent-soft);border-radius:10px;padding:10px 12px;margin:0}
+.rrr{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.rrr div{border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center;font-size:13px}
+.rrr b{display:block;font-family:var(--display);font-weight:500;font-size:14px;margin-bottom:4px}
+.ba{display:flex;flex-direction:column;gap:4px;margin-top:4px;font-size:14px}
+.ba span{padding:6px 10px;border-radius:8px;white-space:pre-wrap;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.ba .b{background:var(--paper);color:var(--muted)}
+.ba .a{background:var(--accent-soft);color:var(--ink)}
+.ba i{font-style:normal;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-right:6px}
+.kv2{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:15px}
+.kv2 dt{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:3px}
+.kv2 dd{margin:0;min-width:0}
 /* "use your Claude app" sheet */
 .sheet-bg{position:fixed;inset:0;background:rgba(10,12,18,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--surface);color:var(--ink);width:min(100%,560px);max-height:88vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
@@ -303,6 +314,10 @@ body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none
       <textarea id="liForWho" placeholder="Their role and how they talk, or paste a post they wrote so it matches their voice." aria-label="Ghostwriting for"></textarea>
     </details>
     <div class="row"><button class="btn" type="button" id="liGo">Write it</button><span class="status" id="liStatus"></span></div>
+    <details class="opts" id="liOwnWrap"><summary>Already wrote a post? Check it</summary>
+      <textarea id="liOwn" style="min-height:140px" placeholder="Paste your LinkedIn post. Set who it's for and the tone above, then tap Check." aria-label="Your LinkedIn post"></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn ghost" type="button" id="liOwnGo">Check my post</button><span class="status" id="liOwnStatus"></span></div>
+    </details>
   </div>
 
   <div class="card" id="liS2" hidden>
@@ -336,8 +351,17 @@ body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none
       <div class="row" id="liFixRow"><button class="btn" type="button" id="liFix">Fix AI phrases</button><span class="status" id="liFixStatus"></span></div>
     </div>
   </div>
+
+  <div class="card" id="liS3" hidden>
+    <div class="sh"><span class="num">3</span><h2>Expert check</h2></div>
+    <p class="help">A top LinkedIn ghostwriter reviews it against your framework: the reader's psychology, the hook, every line's job, specific detail and whether it sounds like a real person.</p>
+    <div class="row"><button class="btn" type="button" id="liCheckGo">Check it like an expert</button><span class="status" id="liCheckStatus"></span></div>
+    <div id="liCheckOut"></div>
+    <div class="row" id="liCheckFixRow" hidden><button class="btn" type="button" id="liCheckFix">Fix these issues</button><span class="status" id="liCheckFixStatus"></span></div>
+  </div>
 </section>
 
+<!-- ============ LINKEDIN CHECK (inserted) ============ -->
 <!-- ============ IMPROVE ============ -->
 <section data-view="improve" hidden style="display:flex;flex-direction:column;gap:16px">
   <p class="lead">Paste anything you wrote. See what sounds like AI, then get an editor's feedback.</p>
@@ -414,7 +438,7 @@ function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clea
 
 // ---------- session-only state ----------
 const KEY="wd-session";
-const LI_EMPTY=()=>({type:"Post",topic:"",details:"",aud:"Founders & CEOs",audCustom:"",tone:"Conversational",len:"Medium",forWho:"",out:null,prev:null});
+const LI_EMPTY=()=>({type:"Post",topic:"",details:"",aud:"Founders & CEOs",audCustom:"",tone:"Conversational",len:"Medium",forWho:"",out:null,prev:null,check:null,own:""});
 const EMPTY=()=>({li:LI_EMPTY(),tab:"write",topic:"",notes:"",fmt:"Auto",len:"As suggested",plan:null,draft:"",draftPrev:"",check:null,text:"",textPrev:"",coach:""});
 let S=EMPTY();
 try{const r=sessionStorage.getItem(KEY);if(r)S=Object.assign(EMPTY(),JSON.parse(r))}catch(e){}
@@ -801,7 +825,7 @@ function showTab(t){
 function renderAll(){
   $("#topic").value=S.topic;$("#notes").value=S.notes;$("#text").value=S.text;
   editing=false;$("#draftEdit").hidden=true;$("#draftOut").hidden=false;$("#editBtn").textContent="Edit";
-  $("#liTopic").value=S.li.topic;$("#liDetails").value=S.li.details;$("#liAudCustom").value=S.li.audCustom;$("#liForWho").value=S.li.forWho;
+  $("#liTopic").value=S.li.topic;$("#liDetails").value=S.li.details;$("#liAudCustom").value=S.li.audCustom;$("#liForWho").value=S.li.forWho;$("#liOwn").value=S.li.own||"";
   liEditing=false;$("#liEditBox").hidden=true;$("#liPreview").hidden=false;$("#liEdit").textContent="Edit";
   renderChips();renderPlan();renderDraft();renderText();renderLI();showTab(S.tab);
 }
@@ -937,9 +961,10 @@ function renderLIForm(){
 }
 let liEditing=false;
 function renderLI(){
-  const L=S.li,o=L.out;$("#liS2").hidden=!o;renderLIForm();if(!o)return;
+  const L=S.li,o=L.out;$("#liS2").hidden=!o;renderLIForm();if(!o){$("#liS3").hidden=true;return}
   const A=a=>Array.isArray(a)?a:[],t=String(o.content||"");
   $("#liOutTitle").textContent=({"Post":"Your post","Story":"Your story post","Carousel":"Your carousel","Headline + About":"Your headline and About","Comment":"Your comment","Message":"Your message"})[L.type]||"Your post";
+  if(o.own)$("#liOutTitle").textContent="Your post";
   const adds=(t.match(/\[(?:add|verify):/gi)||[]).length;
   $("#liMeta").textContent=`${t.length.toLocaleString()} / 3,000 characters · ${wc(t)} words${adds?` · ${adds} real detail${adds>1?"s":""} to add`:""}`;
   $("#liAudLine").textContent=`For ${liAud()} · ${L.tone}`;
@@ -956,8 +981,9 @@ function renderLI(){
   $("#liWhy").innerHTML=A(o.why).map(w=>`<div class="whyrow"><b>${esc(w.part)}</b> · ${esc(w.reason)}</div>`).join("")+(o.tip?`<p class="tipline"><b>Posting tip:</b> ${esc(o.tip)}</p>`:"");
   const total=renderPatterns(t,{verdict:"#liVerdict",summary:"#liSummary",list:"#liList",scope:"#liText"});
   $("#liFixRow").hidden=!total;$("#liUndo").hidden=!L.prev;
+  renderLICheck();
 }
-function liLoad(r){if(!r||typeof r!=="object"||typeof r.content!=="string"||r.content.trim().length<20)return "That doesn't look like the full answer. Copy Claude's whole reply, including the code block.";S.li.prev=S.li.out?JSON.parse(JSON.stringify(S.li.out)):null;r.content=r.content.replace(/\\n/g,"\n").trim();S.li.out=r;save();liEditing=false;$("#liEditBox").hidden=true;$("#liPreview").hidden=false;$("#liEdit").textContent="Edit";renderLI();setTimeout(()=>$("#liS2").scrollIntoView({behavior:"smooth",block:"start"}),50)}
+function liLoad(r){if(!r||typeof r!=="object"||typeof r.content!=="string"||r.content.trim().length<20)return "That doesn't look like the full answer. Copy Claude's whole reply, including the code block.";S.li.check=null;S.li.prev=S.li.out?JSON.parse(JSON.stringify(S.li.out)):null;r.content=r.content.replace(/\\n/g,"\n").trim();S.li.out=r;save();liEditing=false;$("#liEditBox").hidden=true;$("#liPreview").hidden=false;$("#liEdit").textContent="Edit";renderLI();setTimeout(()=>$("#liS2").scrollIntoView({behavior:"smooth",block:"start"}),50)}
 function liRun(btn,status,change,busy){
   if(!S.li.topic.trim()&&!change){$("#liTopic").focus();$("#liStatus").className="status err";$("#liStatus").textContent="Tell me what it's about first.";return}
   runAI({btn,status,prompt:()=>liPrompt(change),json:true,busy,
@@ -978,16 +1004,94 @@ document.addEventListener("click",e=>{
   if((b=e.target.closest("[data-lilen]"))){S.li.len=b.dataset.lilen;save();renderLIForm();return}
   if((b=e.target.closest("[data-tweak]"))){const t=LI_TWEAKS[+b.dataset.tweak];liRun("#"+b.id,"#liTweakStatus",t[1],t[0]+"…");return}
   if((b=e.target.closest("[data-hook]"))){
-    const o=S.li.out,i=+b.dataset.hook,parts=o.content.split(/\n\s*\n/);const old=parts[0];parts[0]=o.hooks[i];o.hooks[i]=old;o.content=parts.join("\n\n");save();renderLI();toast("Opening swapped");return}
+    const o=S.li.out,i=+b.dataset.hook,parts=o.content.split(/\n\s*\n/);const old=parts[0];parts[0]=o.hooks[i];o.hooks[i]=old;o.content=parts.join("\n\n");S.li.check=null;save();renderLI();toast("Opening swapped");return}
 });
 $("#liCopy").onclick=()=>{const o=S.li.out;if(!o)return;const tags=(Array.isArray(o.hashtags)?o.hashtags:[]).slice(0,3).map(h=>String(h).startsWith("#")?h:"#"+h).join(" ");const t=o.content+(tags?"\n\n"+tags:"");try{navigator.clipboard.writeText(t).then(()=>toast(/\[(?:add|verify):/i.test(t)?"Copied. Replace the [add: …] parts before posting.":"Copied. Ready to paste into LinkedIn."),()=>{if(!liEditing)$("#liEdit").click()})}catch(e){}};
-$("#liEdit").onclick=()=>{liEditing=!liEditing;const ta=$("#liEditBox");ta.hidden=!liEditing;$("#liPreview").hidden=liEditing;$("#liEdit").textContent=liEditing?"Done":"Edit";if(liEditing){ta.value=S.li.out.content;ta.focus()}else{S.li.out.content=ta.value;save();renderLI()}};
-$("#liEditBox").oninput=e=>{S.li.out.content=e.target.value;save()};
-$("#liUndo").onclick=()=>{if(!S.li.prev)return;S.li.out=S.li.prev;S.li.prev=null;save();renderLI();toast("Previous version restored")};
+$("#liEdit").onclick=()=>{liEditing=!liEditing;const ta=$("#liEditBox");ta.hidden=!liEditing;$("#liPreview").hidden=liEditing;$("#liEdit").textContent=liEditing?"Done":"Edit";if(liEditing){ta.value=S.li.out.content;ta.focus()}else{if(S.li.out.content!==ta.value)S.li.check=null;S.li.out.content=ta.value;save();renderLI()}};
+
+$("#liEditBox").oninput=e=>{S.li.out.content=e.target.value;S.li.check=null;save()};
+$("#liUndo").onclick=()=>{if(!S.li.prev)return;S.li.out=S.li.prev;S.li.prev=null;S.li.check=null;save();renderLI();toast("Previous version restored")};
 $("#liFix").onclick=()=>{
   const before=aiScan(S.li.out.content).reduce((a,f)=>a+f.count,0);
-  const apply=t=>{S.li.prev=JSON.parse(JSON.stringify(S.li.out));S.li.out.content=stripFence(t);save();renderLI();toast(`AI phrases: ${before} → ${aiScan(S.li.out.content).reduce((a,f)=>a+f.count,0)}`)};
+  const apply=t=>{S.li.prev=JSON.parse(JSON.stringify(S.li.out));S.li.out.content=stripFence(t);S.li.check=null;save();renderLI();toast(`AI phrases: ${before} → ${aiScan(S.li.out.content).reduce((a,f)=>a+f.count,0)}`)};
   runAI({btn:"#liFix",status:"#liFixStatus",prompt:()=>fixAIPrompt(S.li.out.content,false)+"\nKeep it plain text for LinkedIn: no markdown, keep the line breaks.",busy:"Rewriting the AI-sounding lines…",done:({text})=>apply(text),manual:t=>{if(!t.trim())return "Paste the rewritten post.";apply(t)}});
+};
+
+
+// ---------- LinkedIn expert check ----------
+const LI_CHECKS=["Hook stops the target reader before “…see more”","Recognition → relevance → reward","Written for this reader's situation and goals","One clear idea","Specific, real detail","Explains why it matters to the reader","Every line does a job","Easy to read on a phone","Matches the chosen tone","Sounds like a real person","Credible and generous, no humblebrag","Ends with a specific question or next step","No AI or LinkedIn clichés"];
+function liCheckPrompt(){const L=S.li,t=L.out.content,found=aiScan(t);return `You are a top LinkedIn ghostwriter and a strict editor who trains other writers. Review this ${L.type.toLowerCase()} using the writer's framework and the LinkedIn ghostwriting method below. Be honest and specific; do not inflate the score. 9-10 means a top ghostwriter would publish it as is.
+
+${FRAMEWORK}
+
+${LI_GUIDE}
+
+TARGET READER: ${liAud()}
+CHOSEN TONE: ${L.tone}
+FORMAT: ${L.type}. ${LI_TYPE_GUIDE[L.type]}
+VOICE: ${L.forWho.trim()?"Ghostwritten for this person: "+L.forWho:"The writer themself, first person."}
+${found.length?"AI/LinkedIn clichés already detected automatically: "+found.map(f=>`"${f.label}" ×${f.count}`).join(", "):""}
+
+THE CONTENT:
+"""
+${t.slice(0,12000)}
+"""
+
+Review it like this:
+1. Audience psychology: for this target reader, what is their situation, goal, obstacle and concern, and how well does the content serve them?
+2. The hook: rate Recognition, Relevance and Reward (strong or weak).
+3. Every line: does it do a job? Is it specific? Does it explain why it matters?
+4. Ghostwriting review: would this person genuinely say this? Which parts sound borrowed, generic, AI-written, or like claims that need their real experience?
+
+Reply with only one JSON object:
+{"score": integer 1-10,
+"verdict": "two sentences: how close to top-ghostwriter standard and the single biggest weakness",
+"reader": {"situation": "", "goal": "", "obstacle": "", "concern": "", "fit": "one or two sentences on how well it serves them"},
+"hook": {"recognition": "strong|weak", "relevance": "strong|weak", "reward": "strong|weak", "note": "one sentence"},
+"checks": [{"name": "...", "status": "pass|warn|fail", "note": "one specific sentence"}],
+"issues": [{"severity": "high|medium|low", "where": "short quote or part", "problem": "what is wrong and why it matters to this reader", "fix": "exactly what to change", "before": "the original words (short)", "after": "your rewrite"}],
+"voice": "one or two sentences on authenticity: would this person really say it, and what sounds borrowed",
+"add_details": ["real details from the writer's own experience that would make it much stronger"]}
+Use exactly these check names, in this order: ${JSON.stringify(LI_CHECKS)}.
+At most 6 issues, most important first. Never invent facts about the writer.`}
+function liCheckFixChange(){const c=S.li.check||{},A=a=>Array.isArray(a)?a:[];return `Fix every issue a top ghostwriter found, keep everything that already works, and keep it in the same voice.
+${A(c.issues).map((i,n)=>`${n+1}. [${i.severity}] ${i.where}: ${i.problem} FIX: ${i.fix}${i.after?` (suggested: "${i.after}")`:""}`).join("\n")}
+${A(c.checks).filter(x=>x.status!=="pass").map(x=>`WEAK: ${x.name}: ${x.note}`).join("\n")}
+${c.hook?`HOOK: recognition ${c.hook.recognition}, relevance ${c.hook.relevance}, reward ${c.hook.reward}. ${c.hook.note||""}`:""}
+${c.voice?`VOICE NOTE: ${c.voice}`:""}
+Where a real detail is needed and not given, use [add: ...]. Never invent experiences or numbers.`}
+function renderLICheck(){
+  const c=S.li.check,o=$("#liCheckOut");$("#liS3").hidden=!S.li.out;
+  if(!c){o.innerHTML="";$("#liCheckFixRow").hidden=true;return}
+  const A=a=>Array.isArray(a)?a:[],sc=Math.max(0,Math.min(10,parseInt(c.score)||0)),ord={high:0,medium:1,low:2},r=c.reader||{},h=c.hook||{};
+  const weak=A(c.checks).filter(x=>x.status!=="pass");
+  const rr=k=>{const v=String(h[k]||"").toLowerCase()==="strong";return `<div><b>${k[0].toUpperCase()+k.slice(1)}</b><span class="pill ${v?"pass":"fail"}">${v?"Strong":"Weak"}</span></div>`};
+  o.innerHTML=`<div class="res">
+    <div class="score"><div class="big">${sc}<small>/10</small></div><p>${esc(c.verdict)}</p></div>
+    ${h.recognition?`<div class="blk"><h3>The hook</h3><div class="rrr">${rr("recognition")}${rr("relevance")}${rr("reward")}</div>${h.note?`<p class="help">${esc(h.note)}</p>`:""}</div>`:""}
+    ${r.fit?`<div class="blk"><h3>Reader fit · ${esc(liAud())}</h3><dl class="kv2">${r.situation?`<dt>Situation</dt><dd>${esc(r.situation)}</dd>`:""}${r.goal?`<dt>Goal</dt><dd>${esc(r.goal)}</dd>`:""}${r.obstacle?`<dt>Obstacle</dt><dd>${esc(r.obstacle)}</dd>`:""}${r.concern?`<dt>Concern</dt><dd>${esc(r.concern)}</dd>`:""}<dt>Fit</dt><dd>${esc(r.fit)}</dd></dl></div>`:""}
+    ${A(c.issues).length?`<div><h3>What a top ghostwriter would change</h3>${A(c.issues).slice().sort((a,b)=>(ord[a.severity]??1)-(ord[b.severity]??1)).map(i=>{const sv=ord[i.severity]!=null?i.severity:"medium";return `<div class="issue"><div><span class="pill ${sv}">${sv}</span></div><span class="where">${esc(i.where)}</span><span>${esc(i.problem)}</span><span class="fix"><b>Fix</b> · ${esc(i.fix)}</span>${i.before||i.after?`<div class="ba">${i.before?`<span class="b"><i>Before</i>${esc(i.before)}</span>`:""}${i.after?`<span class="a"><i>After</i>${esc(i.after)}</span>`:""}</div>`:""}</div>`}).join("")}</div>`:""}
+    ${c.voice?`<div class="blk"><h3>Does it sound like a real person?</h3><p style="margin:0;font-size:15px">${esc(c.voice)}</p></div>`:""}
+    ${A(c.add_details).length?`<div class="blk"><h3>Real details that would make it stronger</h3><ul>${A(c.add_details).map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`:""}
+    ${A(c.checks).length?`<details class="more"><summary>All ${A(c.checks).length} ghostwriter checks (${A(c.checks).length-weak.length} passed)</summary>${A(c.checks).map(x=>{const st=["pass","warn","fail"].includes(x.status)?x.status:"warn";return `<div class="chk"><span class="pill ${st}">${st==="pass"?"Pass":st==="warn"?"Weak":"Fail"}</span><b>${esc(x.name)}</b><span class="note">${esc(x.note)}</span></div>`}).join("")}</details>`:""}
+  </div>`;
+  $("#liCheckFixRow").hidden=!A(c.issues).length&&!weak.length;
+}
+function liLoadCheck(r){if(!r||typeof r!=="object"||!("score" in r))return "That doesn't look like the full check. Copy Claude's whole reply.";S.li.check=r;save();renderLICheck();setTimeout(()=>$("#liS3").scrollIntoView({behavior:"smooth",block:"start"}),50)}
+function liCheck(btn,status){
+  if(!S.li.out||!S.li.out.content.trim())return;
+  runAI({btn,status,prompt:liCheckPrompt,json:true,busy:"A top ghostwriter is reviewing it…",
+    done:(r,st)=>{const err=liLoadCheck(r);if(err){st.className="status err";st.textContent=errCopy("invalid_json")}},manual:t=>liLoadCheck(parseLoose(t))});
+}
+$("#liCheckGo").onclick=()=>liCheck("#liCheckGo","#liCheckStatus");
+$("#liCheckFix").onclick=()=>{const before=parseInt((S.li.check||{}).score)||0;liRun("#liCheckFix","#liCheckFixStatus",liCheckFixChange(),"Applying the ghostwriter's fixes…");if(before)toast("When it's done, check again to see the new score.")};
+$("#liOwn").oninput=e=>{S.li.own=e.target.value;save()};
+$("#liOwnGo").onclick=()=>{
+  const t=S.li.own.trim(),st=$("#liOwnStatus");
+  if(wc(t)<10){st.className="status err";st.textContent="Paste your full post first.";$("#liOwn").focus();return}
+  st.textContent="";S.li.prev=S.li.out?JSON.parse(JSON.stringify(S.li.out)):null;
+  S.li.out={content:t,hooks:[],why:[],hashtags:[],tip:"",own:true};S.li.check=null;save();renderLI();
+  liCheck("#liCheckGo","#liCheckStatus");setTimeout(()=>$("#liS3").scrollIntoView({behavior:"smooth",block:"start"}),50);
 };
 
 // ---------- start over ----------
@@ -996,7 +1100,7 @@ $("#clearNo").onclick=()=>{$("#clearConfirm").hidden=true};
 $("#clearYes").onclick=()=>{
   document.querySelectorAll("[data-running]").forEach(b=>b._ctl&&b._ctl.abort());
   const tab=S.tab;S=EMPTY();S.tab=tab;try{sessionStorage.removeItem(KEY)}catch(e){}
-  ["#planStatus","#writeStatus","#aiFixStatus","#checkStatus","#fixStatus","#coachStatus","#liStatus","#liTweakStatus","#liFixStatus"].forEach(x=>$(x).textContent="");
+  ["#planStatus","#writeStatus","#aiFixStatus","#checkStatus","#fixStatus","#coachStatus","#liStatus","#liTweakStatus","#liFixStatus","#liCheckStatus","#liCheckFixStatus","#liOwnStatus"].forEach(x=>$(x).textContent="");
   $("#clearConfirm").hidden=true;renderAll();window.scrollTo(0,0);toast("Cleared. Fresh start.");
 };
 

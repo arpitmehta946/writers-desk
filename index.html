@@ -185,6 +185,12 @@ details.more summary{font-family:var(--display);font-size:15px;color:var(--accen
 .kv2{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:15px}
 .kv2 dt{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding-top:3px}
 .kv2 dd{margin:0;min-width:0}
+.lenbox{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.lenbox summary{font-weight:500}
+.lenres{display:flex;flex-direction:column;gap:6px;margin-top:8px;font-size:15px}
+.lenres .hit{font-family:var(--display);font-weight:500}
+.lenres .hit.ok{color:var(--ok)} .lenres .hit.off{color:var(--warn)}
+.lenres ul{margin:0;padding-left:20px;color:var(--muted)}
 /* "use your Claude app" sheet */
 .sheet-bg{position:fixed;inset:0;background:rgba(10,12,18,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center}
 .sheet{background:var(--surface);color:var(--ink);width:min(100%,560px);max-height:88vh;overflow-y:auto;border-radius:18px 18px 0 0;padding:20px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:14px}
@@ -270,8 +276,15 @@ body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none
     <div class="row">
       <button class="btn ghost small" type="button" id="copyBtn">Copy</button>
       <button class="btn ghost small" type="button" id="editBtn">Edit</button>
-      <button class="btn ghost small" type="button" id="undoBtn" hidden>Undo last fix</button>
+      <button class="btn ghost small" type="button" id="undoBtn" hidden>Undo last change</button>
     </div>
+    <details class="opts lenbox" id="lnWrap"><summary id="lnSum">Change length</summary>
+      <p class="help">Pick a target. A top editor cuts filler and repetition first and keeps the answer, the key facts and the flow.</p>
+      <div class="chips" id="lnChips" role="group" aria-label="Target length"></div>
+      <div class="row" style="margin-top:8px"><input type="number" id="lnNum" min="150" max="6000" step="50" inputmode="numeric" placeholder="Or type a number" style="flex:1 1 150px" aria-label="Target word count"><button class="btn" type="button" id="lnGo">Resize</button></div>
+      <span class="status" id="lnStatus"></span>
+      <div class="lenres" id="lnRes" hidden></div>
+    </details>
     <textarea class="editbox" id="draftEdit" hidden aria-label="Article text"></textarea>
     <article class="article" id="draftOut"></article>
 
@@ -379,6 +392,13 @@ body{margin:0;-webkit-tap-highlight-color:transparent;overscroll-behavior-y:none
       <button class="btn ghost" type="button" id="tFixBtn">Fix AI phrases</button>
       <button class="btn ghost small" type="button" id="tUndoBtn" hidden>Undo</button>
     </div>
+    <details class="opts lenbox" id="tlnWrap"><summary id="tlnSum">Change length</summary>
+      <p class="help">Pick a target. A top editor cuts filler and repetition first and keeps the answer, the key facts and the flow.</p>
+      <div class="chips" id="tlnChips" role="group" aria-label="Target length"></div>
+      <div class="row" style="margin-top:8px"><input type="number" id="tlnNum" min="150" max="6000" step="50" inputmode="numeric" placeholder="Or type a number" style="flex:1 1 150px" aria-label="Target word count"><button class="btn" type="button" id="tlnGo">Resize</button></div>
+      <span class="status" id="tlnStatus"></span>
+      <div class="lenres" id="tlnRes" hidden></div>
+    </details>
     <span class="status" id="coachStatus"></span>
     <div class="md" id="coachOut"></div>
   </div>
@@ -410,7 +430,7 @@ async function apiSample(input,opts={}){
   let res;
   try{res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",signal:opts.signal,
       headers:{"content-type":"application/json","x-api-key":key,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},
-      body:JSON.stringify({model:apiModel(),max_tokens:opts._max||8000,stream:true,messages})});
+      body:JSON.stringify({model:apiModel(),max_tokens:opts._max||16000,stream:true,messages})});
   }catch(e){throw {code:e&&e.name==="AbortError"?"cancelled":(navigator.onLine===false?"offline":"upstream_error")}}
   if(!res.ok){let body="";try{body=await res.text()}catch(e){}const s=res.status;
     throw {code:(s===401||s===403)?"bad_key":/credit|billing/i.test(body)?"no_credit":s===429?"rate_limited":(s===529||s===503)?"overloaded":"upstream_error",message:body}}
@@ -439,7 +459,7 @@ function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("on");clea
 // ---------- session-only state ----------
 const KEY="wd-session";
 const LI_EMPTY=()=>({type:"Post",topic:"",details:"",aud:"Founders & CEOs",audCustom:"",tone:"Conversational",len:"Medium",forWho:"",out:null,prev:null,check:null,own:""});
-const EMPTY=()=>({li:LI_EMPTY(),tab:"write",topic:"",notes:"",fmt:"Auto",len:"As suggested",plan:null,draft:"",draftPrev:"",check:null,text:"",textPrev:"",coach:""});
+const EMPTY=()=>({li:LI_EMPTY(),tab:"write",topic:"",notes:"",fmt:"Auto",len:"As suggested",plan:null,draft:"",draftPrev:"",check:null,text:"",textPrev:"",coach:"",ln:{target:1500,note:null},tln:{target:800,note:null}});
 let S=EMPTY();
 try{const r=sessionStorage.getItem(KEY);if(r)S=Object.assign(EMPTY(),JSON.parse(r))}catch(e){}
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{sessionStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},200)}
@@ -797,6 +817,7 @@ function renderDraft(){
   $("#aiFixRow").hidden=!total;
   $("#draftOut").classList.toggle("aioff",!$("#aiToggle").checked);
   $("#undoBtn").hidden=!S.draftPrev;
+  renderLen("ln");
   renderCheck();
 }
 function renderCheck(){
@@ -816,6 +837,7 @@ function renderText(){
   $("#textMeta").textContent=has?`${wc(t).toLocaleString()} words`:"";
   if(has){$("#textPreview").innerHTML=mdArticle(t);highlightAI($("#textPreview"),aiActiveSet(t));renderPatterns(t,{verdict:"#tVerdict",summary:"#tSummary",list:"#tList",scope:"#textPreview"})}
   $("#coachOut").innerHTML=S.coach?mdToHtml(S.coach):"";
+  $("#tlnWrap").hidden=!has;if(has)renderLen("tln");
 }
 function showTab(t){
   if(!["write","linkedin","improve"].includes(t))t="write";S.tab=t;save();
@@ -829,7 +851,7 @@ function renderAll(){
   liEditing=false;$("#liEditBox").hidden=true;$("#liPreview").hidden=false;$("#liEdit").textContent="Edit";
   renderChips();renderPlan();renderDraft();renderText();renderLI();showTab(S.tab);
 }
-function setDraft(t,keepPrev){S.draftPrev=keepPrev&&S.draft?S.draft:"";S.draft=t.trim();S.check=null;save();editing=false;$("#draftEdit").hidden=true;$("#draftOut").hidden=false;$("#editBtn").textContent="Edit";renderDraft()}
+function setDraft(t,keepPrev){S.ln.note=null;S.draftPrev=keepPrev&&S.draft?S.draft:"";S.draft=t.trim();S.check=null;save();editing=false;$("#draftEdit").hidden=true;$("#draftOut").hidden=false;$("#editBtn").textContent="Edit";renderDraft()}
 
 // ---------- actions ----------
 document.addEventListener("click",e=>{
@@ -839,7 +861,7 @@ document.addEventListener("click",e=>{
 });
 $("#topic").oninput=e=>{S.topic=e.target.value;save()};
 $("#notes").oninput=e=>{S.notes=e.target.value;save()};
-let textT;$("#text").oninput=e=>{S.text=e.target.value;save();clearTimeout(textT);textT=setTimeout(renderText,250)};
+let textT;$("#text").oninput=e=>{S.text=e.target.value;S.tln.note=null;save();clearTimeout(textT);textT=setTimeout(renderText,250)};
 $("#aiToggle").onchange=e=>$("#draftOut").classList.toggle("aioff",!e.target.checked);
 
 function loadPlan(r){if(!r||!Array.isArray(r.sections)||!r.sections.length)return "That doesn't look like the full plan. Copy Claude's whole reply.";S.plan=r;save();renderPlan();setTimeout(()=>$("#s2").scrollIntoView({behavior:"smooth",block:"start"}),50)}
@@ -875,9 +897,9 @@ $("#fixBtn").onclick=()=>runAI({btn:"#fixBtn",status:"#fixStatus",prompt:fixIssu
   done:({text})=>{loadArticle(text,true);toast("Fixed. Check again to see the new score.")},manual:t=>loadArticle(t,true)});
 
 $("#copyBtn").onclick=()=>{const t=S.draft;try{navigator.clipboard.writeText(t).then(()=>toast("Article copied"),()=>{editing=true;$("#editBtn").click()})}catch(e){}};
-$("#editBtn").onclick=()=>{editing=!editing;const ta=$("#draftEdit");ta.hidden=!editing;$("#draftOut").hidden=editing;$("#editBtn").textContent=editing?"Done":"Edit";if(editing){ta.value=S.draft;ta.focus()}else{S.draft=ta.value;S.check=null;save();renderDraft()}};
+$("#editBtn").onclick=()=>{editing=!editing;const ta=$("#draftEdit");ta.hidden=!editing;$("#draftOut").hidden=editing;$("#editBtn").textContent=editing?"Done":"Edit";if(editing){ta.value=S.draft;ta.focus()}else{if(S.draft!==ta.value){S.check=null;S.ln.note=null}S.draft=ta.value;save();renderDraft()}};
 $("#draftEdit").oninput=e=>{S.draft=e.target.value;save()};
-$("#undoBtn").onclick=()=>{if(!S.draftPrev)return;S.draft=S.draftPrev;S.draftPrev="";S.check=null;save();renderDraft();toast("Previous version restored")};
+$("#undoBtn").onclick=()=>{if(!S.draftPrev)return;S.ln.note=null;S.draft=S.draftPrev;S.draftPrev="";S.check=null;save();renderDraft();toast("Previous version restored")};
 
 $("#coachBtn").onclick=()=>{
   if(wc(S.text)<15){$("#text").focus();$("#coachStatus").className="status err";$("#coachStatus").textContent="Paste at least a paragraph first.";return}
@@ -890,8 +912,75 @@ $("#tFixBtn").onclick=()=>{
   const apply=t=>{S.textPrev=S.text;S.text=stripFence(t);save();$("#text").value=S.text;renderText();toast("AI phrases rewritten")};
   runAI({btn:"#tFixBtn",status:"#coachStatus",prompt:()=>fixAIPrompt(S.text,false),busy:"Rewriting the AI-sounding sentences…",done:({text})=>apply(text),manual:t=>{if(!t.trim())return "Paste the rewritten text.";apply(t)}});
 };
-$("#tUndoBtn").onclick=()=>{if(!S.textPrev)return;S.text=S.textPrev;S.textPrev="";save();$("#text").value=S.text;renderText()};
+$("#tUndoBtn").onclick=()=>{if(!S.textPrev)return;S.tln.note=null;S.text=S.textPrev;S.textPrev="";save();$("#text").value=S.text;renderText()};
 
+
+
+// ---------- Change length (articles and pasted text) ----------
+const LEN_TARGETS=[800,1200,1500,2000,2500];
+function resizePrompt(text,target,isArticle){const cur=wc(text),shorter=target<cur;return `You are a top editor. ${shorter?"Cut":"Expand"} this ${isArticle?"article":"piece"} from ${cur.toLocaleString()} words to about ${target.toLocaleString()} words (acceptable range: ${Math.round(target*.9).toLocaleString()} to ${Math.round(target*1.1).toLocaleString()} words) WITHOUT losing quality. Strictly follow the framework and the writing rules below.
+
+${FRAMEWORK}
+${isArticle&&S.plan?"\nTHE ARTICLE'S PLAN (keep its intent, reader and flow): "+JSON.stringify(S.plan)+"\n":""}${S.notes.trim()&&isArticle?"WRITER'S NOTES: "+S.notes+"\n":""}
+How to do it:
+1. First decide what this reader must have: the direct answer to their question, what they need to compare or decide, and what they need to act safely and confidently. All of that stays.
+2. Budget the ${target.toLocaleString()} words across the sections by how much each matters to the reader. The direct answer stays within the first 150 words. Keep the know → decide → act order.
+${shorter?`3. Cut in this order, and stop when you reach the target: filler and throat-clearing; repetition and restated points; generic statements that say nothing specific; extra examples (keep the single best one); background the reader doesn't need; minor sections (merge them into others or remove them).
+4. Shorter must mean tighter, not vaguer. Keep the specifics: numbers, steps, comparisons, the strongest example, tables that help the reader decide, and the next step at the end. Merge headings if sections become too small.`:`3. Add depth, never padding: explain implications for the reader, add one concrete example or scenario where a point is abstract, and answer reader questions the piece leaves open.
+4. Keep everything that already works.`}
+5. Keep every fact and every [verify: ...] placeholder that stays relevant. NEVER add new facts, figures, names or claims.
+6. Keep the writer's voice and tone.
+
+Writing rules:
+${WRITING_RULES}
+
+${isArticle?"ARTICLE":"TEXT"} (${cur.toLocaleString()} words):
+"""
+${text.slice(0,70000)}
+"""
+
+Output the complete revised ${isArticle?"article in Markdown":"text"}, about ${target.toLocaleString()} words. Then on a new line write exactly ===WHAT CHANGED=== followed by 3-5 short bullets on what you ${shorter?"cut or merged":"added"} and why.`}
+function splitResize(t){const parts=String(t||"").split(/\n?\s*={2,}\s*WHAT CHANGED\s*={2,}\s*\n?/i);return {body:stripFence(parts[0]||""),notes:(parts[1]||"").split("\n").map(x=>x.replace(/^[-*•\d.)\s]+/,"").trim()).filter(Boolean).slice(0,6)}}
+function renderLen(px){
+  const isA=px==="ln",st=S[px],text=isA?S.draft:S.text,cur=wc(text);
+  $(`#${px}Sum`).textContent=`Change length · now ${cur.toLocaleString()} words`;
+  $(`#${px}Chips`).innerHTML=LEN_TARGETS.map(n=>`<button type="button" class="chip" data-lenpx="${px}" data-lentgt="${n}" aria-pressed="${n===st.target}">${n.toLocaleString()}</button>`).join("");
+  $(`#${px}Go`).textContent=`Resize to ${Number(st.target).toLocaleString()} words`;
+  const r=$(`#${px}Res`),n=st.note;
+  if(!n){r.hidden=true;r.innerHTML="";return}
+  const got=n.got,off=Math.abs(got-n.target)/n.target,ok=off<=.12;
+  r.hidden=false;
+  r.innerHTML=`<span class="hit ${ok?"ok":"off"}">${n.from.toLocaleString()} → ${got.toLocaleString()} words (target ${n.target.toLocaleString()})${ok?"":`, ${got>n.target?"still long":"a bit short"}`}</span>`+
+    (n.notes.length?`<ul>${n.notes.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"")+
+    (ok?"":`<div class="row"><button class="btn ghost small" type="button" data-lenagain="${px}">Get closer to ${n.target.toLocaleString()}</button></div>`)+
+    `<p class="help">Run the quality check again to confirm nothing important was lost.</p>`;
+}
+function applyResize(px,raw,target,from){
+  const {body,notes}=splitResize(raw);
+  if(wc(body)<Math.min(80,target*.3))return "That looks too short to be the full article. Copy Claude's whole reply.";
+  if(px==="ln"){setDraft(body,true)}else{S.textPrev=S.text;S.text=body;$("#text").value=body;renderText()}
+  S[px].note={from,target,got:wc(body),notes};save();renderLen(px);
+  toast(`Now ${wc(body).toLocaleString()} words`);
+}
+function resize(px){
+  const isA=px==="ln",text=isA?S.draft:S.text,target=Math.round(Number(S[px].target)||0),from=wc(text),st=$(`#${px}Status`);
+  if(from<50){st.className="status err";st.textContent=isA?"Write the article first.":"Paste your article first.";return}
+  if(!target||target<150){st.className="status err";st.textContent="Pick a target of at least 150 words.";return}
+  if(Math.abs(target-from)/from<.08){st.className="status err";st.textContent=`It's already about ${from.toLocaleString()} words.`;return}
+  runAI({btn:`#${px}Go`,status:`#${px}Status`,prompt:()=>resizePrompt(text,target,isA),busy:`${target<from?"Tightening":"Expanding"} to ${target.toLocaleString()} words…`,
+    onText:({text:t},s)=>{s.innerHTML=`<span class="pulse"></span>Rewriting… ${wc(splitResize(t).body).toLocaleString()} of ~${target.toLocaleString()} words`},
+    done:({text:t},s)=>{const err=applyResize(px,t,target,from);if(err){s.className="status err";s.textContent=err}},
+    manual:t=>applyResize(px,t,target,from)});
+}
+["ln","tln"].forEach(px=>{
+  $(`#${px}Go`).onclick=()=>resize(px);
+  $(`#${px}Num`).oninput=e=>{const v=parseInt(e.target.value);if(v>0){S[px].target=v;save();renderLen(px)}};
+});
+document.addEventListener("click",e=>{
+  let b;
+  if((b=e.target.closest("[data-lentgt]"))){const px=b.dataset.lenpx;S[px].target=+b.dataset.lentgt;$(`#${px}Num`).value="";save();renderLen(px);return}
+  if((b=e.target.closest("[data-lenagain]"))){resize(b.dataset.lenagain)}
+});
 
 // ================= LinkedIn =================
 const LI_TYPES=["Post","Story","Carousel","Headline + About","Comment","Message"];
@@ -1100,7 +1189,7 @@ $("#clearNo").onclick=()=>{$("#clearConfirm").hidden=true};
 $("#clearYes").onclick=()=>{
   document.querySelectorAll("[data-running]").forEach(b=>b._ctl&&b._ctl.abort());
   const tab=S.tab;S=EMPTY();S.tab=tab;try{sessionStorage.removeItem(KEY)}catch(e){}
-  ["#planStatus","#writeStatus","#aiFixStatus","#checkStatus","#fixStatus","#coachStatus","#liStatus","#liTweakStatus","#liFixStatus","#liCheckStatus","#liCheckFixStatus","#liOwnStatus"].forEach(x=>$(x).textContent="");
+  ["#planStatus","#writeStatus","#aiFixStatus","#checkStatus","#fixStatus","#coachStatus","#liStatus","#liTweakStatus","#liFixStatus","#liCheckStatus","#liCheckFixStatus","#liOwnStatus","#lnStatus","#tlnStatus"].forEach(x=>$(x).textContent="");
   $("#clearConfirm").hidden=true;renderAll();window.scrollTo(0,0);toast("Cleared. Fresh start.");
 };
 
